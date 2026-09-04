@@ -37,20 +37,20 @@ echo.
 
 java -jar "%~dp0%JAR_FILE%" ^
     --server.port=%SERVER_PORT% ^
-    -Dspring.datasource.url=jdbc:postgresql://%DB_HOST%:%DB_PORT%/%DB_NAME% ^
-    -Dspring.datasource.username=%DB_USER% ^
-    -Dspring.datasource.password=%DB_PASSWORD% ^
-    -Dspring.security.oauth2.resourceserver.jwt.issuer-uri=%KEYCLOAK_ISSUER% ^
-    -Dspring.security.oauth2.resourceserver.jwt.jwk-set-uri=%KEYCLOAK_JWKS% ^
-    -Dapp.fatourati.auth-url=%FATOURATI_AUTH_URL% ^
-    -Dapp.fatourati.base-url=%FATOURATI_BASE_URL% ^
-    -Dapp.fatourati.api-version=%FATOURATI_API_VERSION% ^
-    -Dapp.fatourati.client-id=%FATOURATI_CLIENT_ID% ^
-    -Dapp.fatourati.client-secret=%FATOURATI_CLIENT_SECRET% ^
-    -Dapp.fatourati.merchant-code=%FATOURATI_MERCHANT_CODE% ^
-    -Dapp.fatourati.store=%FATOURATI_STORE% ^
-    -Dapp.fatourati.store-api-key=%FATOURATI_STORE_API_KEY% ^
-    -Dapp.fatourati.cashier-id=%FATOURATI_CASHIER_ID% ^
-    -Dapp.fatourati.callback-url=%FATOURATI_CALLBACK_URL% ^
-    -Dapp.fatourati.callback-secret=%FATOURATI_CALLBACK_SECRET% ^
-    -Dapp.fatourati.token-ttl-minutes=%FATOURATI_TOKEN_TTL%
+    --spring.datasource.url=jdbc:postgresql://%DB_HOST%:%DB_PORT%/%DB_NAME% ^
+    --spring.datasource.username=%DB_USER% ^
+    --spring.datasource.password=%DB_PASSWORD% ^
+    --spring.security.oauth2.resourceserver.jwt.issuer-uri=%KEYCLOAK_ISSUER% ^
+    --spring.security.oauth2.resourceserver.jwt.jwk-set-uri=%KEYCLOAK_JWKS% ^
+    --app.fatourati.auth-url=%FATOURATI_AUTH_URL% ^
+    --app.fatourati.base-url=%FATOURATI_BASE_URL% ^
+    --app.fatourati.api-version=%FATOURATI_API_VERSION% ^
+    --app.fatourati.client-id=%FATOURATI_CLIENT_ID% ^
+    --app.fatourati.client-secret=%FATOURATI_CLIENT_SECRET% ^
+    --app.fatourati.merchant-code=%FATOURATI_MERCHANT_CODE% ^
+    --app.fatourati.store=%FATOURATI_STORE% ^
+    --app.fatourati.store-api-key=%FATOURATI_STORE_API_KEY% ^
+    --app.fatourati.cashier-id=%FATOURATI_CASHIER_ID% ^
+    --app.fatourati.callback-url=%FATOURATI_CALLBACK_URL% ^
+    --app.fatourati.callback-secret=%FATOURATI_CALLBACK_SECRET% ^
+    --app.fatourati.token-ttl-minutes=%FATOURATI_TOKEN_TTL%

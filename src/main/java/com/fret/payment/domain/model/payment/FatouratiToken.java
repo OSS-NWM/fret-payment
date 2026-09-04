@@ -1,0 +1,28 @@
+package com.fret.payment.domain.model.payment;
+
+import lombok.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class FatouratiToken {
+
+    private Long id;
+    private String tokenRef;
+    private String mouvementId;
+    private String orderId;
+    private BigDecimal totalAmount;
+    private String currency;
+    private FatouratiTokenStatus status;
+    private String qrCode;
+    private List<String> channels;
+    private LocalDateTime expiresAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

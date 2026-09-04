@@ -16,6 +16,20 @@ CMI Fatourati payment microservice. Hexagonal architecture (clean architecture) 
 ./mvnw test
 ```
 
+### Windows (no Docker)
+
+```bash
+# Build the JAR
+./mvnw -B -ntp clean package -DskipTests
+
+# Deploy folder: deploy/windows/
+# Files: fret-payment-0.0.1-SNAPSHOT.jar + setenv.bat + start.bat
+# 1. Edit setenv.bat with your environment values
+# 2. Double-click start.bat
+#    or: cmd > start.bat
+# App starts on http://localhost:8000
+```
+
 ## Architecture
 
 Hexagonal layering, dependency rule `adapter → application → domain`:

@@ -1,0 +1,4 @@
+-- insert-fretpayment-ref-data.sql
+-- Payment service has no reference tables to seed (no enum lookups like type_service/etape_service)
+-- This file is kept for parity with fret-management conventions.
+-- Run after the database schema is created.

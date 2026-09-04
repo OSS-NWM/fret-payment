@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  fretpaymentdb:
+    image: postgres:16-alpine
+    container_name: fretpaymentdb
+    environment:
+      POSTGRES_DB: fretpaymentdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Admin123
+    ports:
+      - "5434:5432"
+    volumes:
+      - fretpayment_data:/var/lib/postgresql/data
+    networks:
+      - payment-network
+
+networks:
+  payment-network:
+    driver: bridge
+
+volumes:
+  fretpayment_data:

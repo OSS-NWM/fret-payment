@@ -143,17 +143,22 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
                 orderId,
                 props.getCashierId(),
                 "MULTI_CANAL",
-                "false",
+                "0",
                 expiryDate,
                 props.getStoreApiKey()
         );
-        String signature = signatureUtil.computeSignature(sigData, props.getStoreApiKey());
-        request.setSignature(signature);
+        String signature;
+        if ("SHA256".equalsIgnoreCase(props.getSignatureAlgorithm())) {
+            signature = signatureUtil.computeSha256(sigData);
+        } else {
+            signature = signatureUtil.computeHmacSha256(sigData, props.getStoreApiKey());
+        }
         request.setExtraData(List.of(extraData));
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(getAccessToken());
+        headers.set("x-signature", signature);
 
         HttpEntity<GenerateTokenRequest> entity = new HttpEntity<>(request, headers);
 
@@ -382,7 +387,6 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
         private Boolean generateQrCode = true;
         private String expiryDate;
         private String language;
-        private String signature;
         private List<ExtraData> extraData;
 
         @Getter

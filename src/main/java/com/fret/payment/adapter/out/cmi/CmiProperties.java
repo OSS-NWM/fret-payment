@@ -23,6 +23,7 @@ public class CmiProperties {
     private String storeApiKey;
     private String callbackUrl;
     private String callbackSecret;
+    private String signatureAlgorithm = "HMAC-SHA256";
     private String clientName = "Client Nador West Med";
     private String clientEmail = "client.test@example.com";
     private String clientPhone = "+212600000000";

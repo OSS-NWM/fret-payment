@@ -52,6 +52,7 @@ java -jar "%~dp0%JAR_FILE%" ^
     --app.fatourati.merchant-code=%FATOURATI_MERCHANT_CODE% ^
     --app.fatourati.store=%FATOURATI_STORE% ^
     --app.fatourati.store-api-key=%FATOURATI_STORE_API_KEY% ^
+    --app.fatourati.signature-algorithm=%FATOURATI_SIGNATURE_ALGORITHM% ^
     --app.fatourati.cashier-id=%FATOURATI_CASHIER_ID% ^
     --app.fatourati.callback-url=%FATOURATI_CALLBACK_URL% ^
     --app.fatourati.callback-secret=%FATOURATI_CALLBACK_SECRET% ^

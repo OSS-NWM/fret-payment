@@ -7,6 +7,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.stream.Collectors;
@@ -19,6 +20,10 @@ public class CmiSignatureUtil {
     private static final String HMAC_SHA256 = "HmacSHA256";
 
     public String computeSignature(String data, String secretKey) {
+        return computeHmacSha256(data, secretKey);
+    }
+
+    public String computeHmacSha256(String data, String secretKey) {
         try {
             Mac mac = Mac.getInstance(HMAC_SHA256);
             SecretKeySpec secretKeySpec = new SecretKeySpec(
@@ -29,6 +34,17 @@ public class CmiSignatureUtil {
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             log.error("[CMI] Failed to compute HMAC-SHA256 signature: {}", e.getMessage());
             throw new RuntimeException("Failed to compute CMI signature", e);
+        }
+    }
+
+    public String computeSha256(String data) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] raw = digest.digest(data.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(raw);
+        } catch (NoSuchAlgorithmException e) {
+            log.error("[CMI] Failed to compute SHA-256: {}", e.getMessage());
+            throw new RuntimeException("Failed to compute CMI SHA-256 signature", e);
         }
     }
 

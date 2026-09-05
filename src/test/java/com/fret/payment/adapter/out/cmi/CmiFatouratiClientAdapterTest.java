@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 import static org.hamcrest.Matchers.matchesPattern;
+import static org.hamcrest.Matchers.notNullValue;
 
 class CmiFatouratiClientAdapterTest {
 
@@ -394,7 +395,7 @@ class CmiFatouratiClientAdapterTest {
                 .andExpect(jsonPath("$.items[0].amount").value(100.00))
                 .andExpect(jsonPath("$.items[0].due").value(true))
                 .andExpect(jsonPath("$.items[0].selected").value(true))
-                .andExpect(jsonPath("$.signature").exists())
+                .andExpect(header("x-signature", notNullValue()))
                 .andRespond(withSuccess("""
                         {"status":"CREATED","orderId":"MV-123","tokenRef":"TOKEN-SPEC"}
                         """, MediaType.APPLICATION_JSON));

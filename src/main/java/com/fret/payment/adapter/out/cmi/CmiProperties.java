@@ -13,6 +13,7 @@ public class CmiProperties {
 
     private String baseUrl = "https://agg-merchant-qa.cmi.co.ma";
     private String authUrl = "https://auth-dev.cmi.co.ma";
+    private String authRealm = "pay-gate-ext-qa";
     private String cashierId = "001";
     private String apiVersion = "v1";
     private String clientId;

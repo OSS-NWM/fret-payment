@@ -44,6 +44,7 @@ java -jar "%~dp0%JAR_FILE%" ^
     --spring.security.oauth2.resourceserver.jwt.issuer-uri=%KEYCLOAK_ISSUER% ^
     --spring.security.oauth2.resourceserver.jwt.jwk-set-uri=%KEYCLOAK_JWKS% ^
     --app.fatourati.auth-url=%FATOURATI_AUTH_URL% ^
+    --app.fatourati.auth-realm=%FATOURATI_AUTH_REALM% ^
     --app.fatourati.base-url=%FATOURATI_BASE_URL% ^
     --app.fatourati.api-version=%FATOURATI_API_VERSION% ^
     --app.fatourati.client-id=%FATOURATI_CLIENT_ID% ^

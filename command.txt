@@ -1,0 +1,64 @@
+@echo off
+REM ============================================================
+REM  Fret-Payment Diagnostic Commands
+REM  Run each block individually on the Windows machine at
+REM  51.170.134.229 (the same box running fret-payment on :8000).
+REM  Paste the FULL output of each block back to me.
+REM ============================================================
+
+REM ─── BLOCK 1 — Is fret-payment actually running? ─────────────
+echo === [1] Java process running fret-payment ===
+wmic process where "name='java.exe'" get ProcessId,CommandLine /format:list
+echo.
+
+REM ─── BLOCK 2 — Is port 8000 actually listening on 0.0.0.0? ──
+echo === [2] Listening sockets on port 8000 ===
+netstat -ano | findstr :8000
+echo.
+
+REM ─── BLOCK 3 — Can we reach the CMI OAuth sandbox? ──────────
+echo === [3] Reachability of auth-dev.cmi.co.ma ===
+curl -v -X POST "https://auth-dev.cmi.co.ma/realms/pay-gate-ext-qa/protocol/openid-connect/token" ^
+  -H "Content-Type: application/x-www-form-urlencoded" ^
+  -d "grant_type=client_credentials&client_id=Client_NadorWestmed&client_secret=M2dC0VFRYughLe8z9TCEbIdFNhKCKDLW" ^
+  2>&1
+echo.
+
+REM ─── BLOCK 4 — Get a fresh Keycloak JWT for our test user ────
+echo === [4] Fresh JWT from Keycloak for sadikhajar71 ===
+set "KC_RESPONSE="
+for /f "delims=" %%l in ('curl -s -X POST "http://84.8.223.202:8080/realms/Fret-Management/protocol/openid-connect/token" -d "grant_type=password" -d "client_id=fret-management-client" -d "client_secret=H1hHCuiehIrg3OkKvnKtTZPFkKgSECqucaZzvg9N51nayqw3lga2DHllkhZPeBD86WXRhN2Q0RkHL5qUbWIH83" -d "username=sadikhajar71@gmail.com" -d "password=NWM2026"') do set "KC_RESPONSE=%%l"
+echo Raw response:
+echo %KC_RESPONSE%
+echo.
+REM Extract access_token using findstr (no Python needed)
+set "TOKEN="
+for /f "tokens=2 delims=:," %%t in ('echo %KC_RESPONSE% ^| findstr /i "access_token"') do set "TOKEN=%%t"
+REM Strip leading quote and any whitespace
+set "TOKEN=%TOKEN:"=%"
+set "TOKEN=%TOKEN: =%"
+echo Extracted token: %TOKEN:~0,50%... (length=%TOKEN:~0,0%%)
+echo.
+
+REM ─── BLOCK 5 — Call the failing endpoint and capture full output
+echo === [5] POST initiate AMI-202607000001 (the failing call) ===
+curl -v -X POST "http://51.170.134.229:8000/api/payment/fatourati/mouvement/AMI-202607000001/paiement/fatourati" ^
+  -H "Authorization: Bearer %TOKEN%" ^
+  -H "Content-Type: application/json" ^
+  -d "{}" ^
+  2>&1
+echo.
+
+REM ─── BLOCK 6 — Verify the simpler public endpoint still works ─
+echo === [6] Public check-status (no auth, must return 200) ===
+curl -v "http://51.170.134.229:8000/api/payment/fatourati/check-status?token_ref=NOTFOUND" 2>&1
+echo.
+
+REM ─── BLOCK 7 — Verify the JWT-protected status endpoint works ─
+echo === [7] GET status (JWT required, must return 200 with NOT_FOUND body) ===
+curl -v "http://51.170.134.229:8000/api/payment/fatourati/mouvement/AMI-202607000001/paiement/fatourati/status" ^
+  -H "Authorization: Bearer %TOKEN%" ^
+  2>&1
+echo.
+
+pause

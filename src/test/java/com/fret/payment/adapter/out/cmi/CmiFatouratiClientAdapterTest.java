@@ -53,7 +53,7 @@ class CmiFatouratiClientAdapterTest {
     }
 
     private void mockSuccessfulOAuth() {
-        mockServer.expect(requestTo("https://auth-dev.cmi.co.ma/protocol/openid-connect/token"))
+        mockServer.expect(requestTo("https://auth-dev.cmi.co.ma/realms/pay-gate-ext-qa/protocol/openid-connect/token"))
                 .andRespond(withSuccess("""
                         {"access_token":"test-access-token","token_type":"Bearer","expires_in":3600}
                         """, MediaType.APPLICATION_JSON));
@@ -61,7 +61,7 @@ class CmiFatouratiClientAdapterTest {
 
     private void mockOAuthFourTimes() {
         for (int i = 0; i < 4; i++) {
-            mockServer.expect(requestTo("https://auth-dev.cmi.co.ma/protocol/openid-connect/token"))
+            mockServer.expect(requestTo("https://auth-dev.cmi.co.ma/realms/pay-gate-ext-qa/protocol/openid-connect/token"))
                     .andRespond(withSuccess("""
                             {"access_token":"test-access-token","token_type":"Bearer","expires_in":3600}
                             """, MediaType.APPLICATION_JSON));
@@ -70,7 +70,7 @@ class CmiFatouratiClientAdapterTest {
 
     @Test
     void requestAccessToken_sendsFormEncodedRequest() {
-        mockServer.expect(requestTo("https://auth-dev.cmi.co.ma/protocol/openid-connect/token"))
+        mockServer.expect(requestTo("https://auth-dev.cmi.co.ma/realms/pay-gate-ext-qa/protocol/openid-connect/token"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andExpect(content().string("grant_type=client_credentials&client_id=Client_NadorWestmed&client_secret=test-secret"))
@@ -86,12 +86,45 @@ class CmiFatouratiClientAdapterTest {
 
     @Test
     void requestAccessToken_oauthError_throwsException() {
-        mockServer.expect(requestTo("https://auth-dev.cmi.co.ma/protocol/openid-connect/token"))
+        mockServer.expect(requestTo("https://auth-dev.cmi.co.ma/realms/pay-gate-ext-qa/protocol/openid-connect/token"))
                 .andRespond(withBadRequest().body("{\"error\":\"invalid_client\"}"));
 
         assertThatThrownBy(() -> adapter.requestAccessToken())
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("CMI OAuth token request failed");
+    }
+
+    @Test
+    void requestAccessToken_includesRealmInUrl() {
+        mockServer.expect(requestTo("https://auth-dev.cmi.co.ma/realms/pay-gate-ext-qa/protocol/openid-connect/token"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .andRespond(withSuccess("""
+                        {"access_token":"test-access-token","token_type":"Bearer","expires_in":3600}
+                        """, MediaType.APPLICATION_JSON));
+
+        String token = adapter.requestAccessToken();
+
+        assertThat(token).isEqualTo("test-access-token");
+        mockServer.verify();
+    }
+
+    @Test
+    void requestAccessToken_omitsRealmWhenEmpty() {
+        props.setAuthRealm("");
+        adapter = new CmiFatouratiClientAdapter(props, signatureUtil, restTemplate, objectMapper, null);
+        mockServer = MockRestServiceServer.bindTo(restTemplate).build();
+
+        mockServer.expect(requestTo("https://auth-dev.cmi.co.ma/protocol/openid-connect/token"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess("""
+                        {"access_token":"test-access-token","token_type":"Bearer","expires_in":3600}
+                        """, MediaType.APPLICATION_JSON));
+
+        String token = adapter.requestAccessToken();
+
+        assertThat(token).isEqualTo("test-access-token");
+        mockServer.verify();
     }
 
     @Test

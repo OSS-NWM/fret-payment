@@ -23,6 +23,7 @@ set SERVER_PORT=8000
 
 rem ─── CMI Fatourati ───
 set FATOURATI_AUTH_URL=https://auth-dev.cmi.co.ma
+set FATOURATI_AUTH_REALM=pay-gate-ext-qa
 set FATOURATI_BASE_URL=https://agg-merchant-qa.cmi.co.ma
 set FATOURATI_API_VERSION=v1
 set FATOURATI_CLIENT_ID=Client_NadorWestmed

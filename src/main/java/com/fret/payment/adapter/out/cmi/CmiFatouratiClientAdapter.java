@@ -49,7 +49,10 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
     }
 
     public String requestAccessToken() {
-        String tokenUrl = props.getAuthUrl() + "/protocol/openid-connect/token";
+        String realmSegment = props.getAuthRealm() != null && !props.getAuthRealm().isBlank()
+                ? "/realms/" + props.getAuthRealm()
+                : "";
+        String tokenUrl = props.getAuthUrl() + realmSegment + "/protocol/openid-connect/token";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);

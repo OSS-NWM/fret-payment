@@ -7,6 +7,7 @@ import com.fret.payment.adapter.out.persistance.adapter.FatouratiTokenRepository
 import com.fret.payment.domain.model.payment.FatouratiPaymentCallback;
 import com.fret.payment.domain.model.payment.FatouratiTokenStatus;
 import com.fret.payment.domain.port.in.payment.ConfirmFatouratiPaymentUseCase;
+import com.fret.payment.domain.port.out.FretManagementNotifierPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
     private final CmiSignatureUtil signatureUtil;
     private final CmiProperties cmiProperties;
     private final ObjectMapper objectMapper;
+    private final FretManagementNotifierPort fretManagementNotifier;
 
     @Override
     public String confirmPayment(FatouratiPaymentCallback callback) {
@@ -68,6 +70,14 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
         if (callback.getDecisionCode() == null || callback.getDecisionCode() == 0) {
             tokenRepository.updateStatus(callback.getTokenRef(), FatouratiTokenStatus.CONSUMED);
             log.info("[FATOURATI_CONFIRM] Payment approved: tokenRef={}", callback.getTokenRef());
+
+            fretManagementNotifier.notifyPaymentConfirmed(
+                    callback.getTokenRef(),
+                    token.getMouvementId(),
+                    callback.getTotalAmount(),
+                    callback.getCurrency(),
+                    callback.getFatouratiTransactionNumber()
+            );
         } else if (callback.getDecisionCode() == 1) {
             log.info("[FATOURATI_CONFIRM] Payment refused: tokenRef={}", callback.getTokenRef());
         } else {

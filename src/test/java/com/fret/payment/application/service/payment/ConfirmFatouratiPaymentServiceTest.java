@@ -7,6 +7,7 @@ import com.fret.payment.adapter.out.persistance.adapter.FatouratiTokenRepository
 import com.fret.payment.domain.model.payment.FatouratiPaymentCallback;
 import com.fret.payment.domain.model.payment.FatouratiToken;
 import com.fret.payment.domain.model.payment.FatouratiTokenStatus;
+import com.fret.payment.domain.port.out.FretManagementNotifierPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,8 @@ class ConfirmFatouratiPaymentServiceTest {
     private CmiSignatureUtil signatureUtil;
     @Mock
     private CmiProperties cmiProperties;
+    @Mock
+    private FretManagementNotifierPort fretManagementNotifier;
     private ObjectMapper objectMapper;
     private ConfirmFatouratiPaymentService service;
 
@@ -42,7 +45,7 @@ class ConfirmFatouratiPaymentServiceTest {
     void setUp() {
         objectMapper = new ObjectMapper();
         service = new ConfirmFatouratiPaymentService(
-                tokenRepository, callbackLogRepository, signatureUtil, cmiProperties, objectMapper);
+                tokenRepository, callbackLogRepository, signatureUtil, cmiProperties, objectMapper, fretManagementNotifier);
     }
 
     @Test
@@ -66,6 +69,7 @@ class ConfirmFatouratiPaymentServiceTest {
 
         FatouratiToken token = FatouratiToken.builder()
                 .tokenRef(tokenRef)
+                .mouvementId("MV-123")
                 .status(FatouratiTokenStatus.CREATED)
                 .build();
 

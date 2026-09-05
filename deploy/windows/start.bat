@@ -36,6 +36,7 @@ echo (Press Ctrl+C to stop)
 echo.
 
 java -jar "%~dp0%JAR_FILE%" ^
+    --server.address=0.0.0.0 ^
     --server.port=%SERVER_PORT% ^
     --spring.datasource.url=jdbc:postgresql://%DB_HOST%:%DB_PORT%/%DB_NAME% ^
     --spring.datasource.username=%DB_USER% ^

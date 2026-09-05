@@ -1,10 +1,9 @@
 package com.fret.payment.adapter.out.http;
 
-import com.fret.payment.adapter.out.cmi.CmiProperties;
 import com.fret.payment.domain.model.payment.InvoiceInfo;
 import com.fret.payment.domain.port.out.payment.InvoiceInfoPort;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -15,19 +14,22 @@ import java.util.Map;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class InvoiceInfoHttpAdapter implements InvoiceInfoPort {
 
-    private final CmiProperties cmiProperties;
     private final RestTemplate restTemplate;
+    private final String fretManagementBaseUrl;
 
-    private static final String FRET_MANAGEMENT_URL = "http://localhost:8081";
+    public InvoiceInfoHttpAdapter(RestTemplate restTemplate,
+                                  @Value("${app.fret-management.base-url:http://localhost:8081}") String fretManagementBaseUrl) {
+        this.restTemplate = restTemplate;
+        this.fretManagementBaseUrl = fretManagementBaseUrl;
+    }
 
     @Override
     @SuppressWarnings("unchecked")
     public List<InvoiceInfo> findByMouvementId(String mouvementId) {
         try {
-            String url = FRET_MANAGEMENT_URL + "/api/invoices/mouvement/" + mouvementId;
+            String url = fretManagementBaseUrl + "/api/invoices/mouvement/" + mouvementId;
             Object response = restTemplate.getForObject(url, Object.class);
 
             List<InvoiceInfo> result = new ArrayList<>();

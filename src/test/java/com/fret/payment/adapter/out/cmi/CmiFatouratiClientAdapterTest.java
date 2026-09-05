@@ -47,7 +47,8 @@ class CmiFatouratiClientAdapterTest {
         signatureUtil = new CmiSignatureUtil();
         restTemplate = new RestTemplate();
         objectMapper = new ObjectMapper();
-        adapter = new CmiFatouratiClientAdapter(props, signatureUtil, restTemplate, objectMapper);
+
+        adapter = new CmiFatouratiClientAdapter(props, signatureUtil, restTemplate, objectMapper, null);
         mockServer = MockRestServiceServer.bindTo(restTemplate).build();
     }
 

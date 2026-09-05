@@ -8,6 +8,7 @@ import com.fret.payment.domain.model.payment.FatouratiTransactionStatus;
 import com.fret.payment.domain.port.out.payment.CmiFatouratiClientPort;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -27,17 +28,23 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
     private final CmiSignatureUtil signatureUtil;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final CmiAccessTokenCacheService tokenCache;
 
     public CmiFatouratiClientAdapter(CmiProperties props, CmiSignatureUtil signatureUtil,
-                                     RestTemplate restTemplate, ObjectMapper objectMapper) {
+                                     RestTemplate restTemplate, ObjectMapper objectMapper,
+                                     @Lazy CmiAccessTokenCacheService tokenCache) {
         this.props = props;
         this.signatureUtil = signatureUtil;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+        this.tokenCache = tokenCache;
     }
 
     @Override
     public String getAccessToken() {
+        if (tokenCache != null) {
+            return tokenCache.getAccessToken();
+        }
         return requestAccessToken();
     }
 

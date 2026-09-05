@@ -26,7 +26,7 @@ public class FatouratiPaymentController {
     private final CancelFatouratiPaymentService cancelService;
 
     @PostMapping("/mouvement/{mouvementId}/paiement/fatourati")
-    @PreAuthorize("hasRole('AGENT_FACTURATION_NWM') or hasRole('RESPONSABLE_FACTURATION_NWM')")
+    @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
     public ResponseEntity<?> initiatePayment(@PathVariable String mouvementId) {
         log.info("[FATOURATI_PAY] Initiate payment: mouvementId={}", mouvementId);
 
@@ -48,7 +48,7 @@ public class FatouratiPaymentController {
     }
 
     @GetMapping("/mouvement/{mouvementId}/paiement/fatourati/status")
-    @PreAuthorize("hasRole('AGENT_FACTURATION_NWM') or hasRole('RESPONSABLE_FACTURATION_NWM')")
+    @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
     public ResponseEntity<?> getPaymentStatus(@PathVariable String mouvementId) {
         log.debug("[FATOURATI_PAY] Status check: mouvementId={}", mouvementId);
 
@@ -69,7 +69,7 @@ public class FatouratiPaymentController {
     }
 
     @DeleteMapping("/mouvement/{mouvementId}/paiement/fatourati")
-    @PreAuthorize("hasRole('AGENT_FACTURATION_NWM') or hasRole('RESPONSABLE_FACTURATION_NWM')")
+    @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
     public ResponseEntity<?> cancelPayment(@PathVariable String mouvementId) {
         log.info("[FATOURATI_PAY] Cancel payment: mouvementId={}", mouvementId);
 

@@ -143,7 +143,7 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
                 orderId,
                 props.getCashierId(),
                 "MULTI_CANAL",
-                "0",
+                "true",
                 expiryDate,
                 props.getStoreApiKey()
         );

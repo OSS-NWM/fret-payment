@@ -394,7 +394,7 @@ class CmiFatouratiClientAdapterTest {
                 .andExpect(jsonPath("$.items[0].amount").value(100.00))
                 .andExpect(jsonPath("$.items[0].due").value(true))
                 .andExpect(jsonPath("$.items[0].selected").value(true))
-                .andExpect(jsonPath("$.signature").doesNotExist())
+                .andExpect(jsonPath("$.signature").exists())
                 .andRespond(withSuccess("""
                         {"status":"CREATED","orderId":"MV-123","tokenRef":"TOKEN-SPEC"}
                         """, MediaType.APPLICATION_JSON));

@@ -134,6 +134,21 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
         request.setGenerateQrCode(true);
         request.setExpiryDate(expiryDate);
         request.setLanguage("fr");
+
+        String sigData = signatureUtil.buildTokenGenSignatureData(
+                signatureUtil.formatAmount(amount),
+                currencyFinal,
+                props.getMerchantCode(),
+                props.getStore(),
+                orderId,
+                props.getCashierId(),
+                "MULTI_CANAL",
+                "false",
+                expiryDate,
+                props.getStoreApiKey()
+        );
+        String signature = signatureUtil.computeSignature(sigData, props.getStoreApiKey());
+        request.setSignature(signature);
         request.setExtraData(List.of(extraData));
 
         HttpHeaders headers = new HttpHeaders();
@@ -367,6 +382,7 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
         private Boolean generateQrCode = true;
         private String expiryDate;
         private String language;
+        private String signature;
         private List<ExtraData> extraData;
 
         @Getter

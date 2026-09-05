@@ -153,6 +153,8 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
         } else {
             signature = signatureUtil.computeHmacSha256(sigData, props.getStoreApiKey());
         }
+        log.info("[CMI] Signature data: '{}'", sigData);
+        log.info("[CMI] x-signature algorithm: {}, value: {}", props.getSignatureAlgorithm(), signature);
         request.setExtraData(List.of(extraData));
 
         HttpHeaders headers = new HttpHeaders();

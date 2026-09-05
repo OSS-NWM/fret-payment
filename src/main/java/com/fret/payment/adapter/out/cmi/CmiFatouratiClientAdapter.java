@@ -88,9 +88,10 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
                 + "/stores/" + props.getStore() + "/token";
 
         String currencyFinal = currency != null ? currency : "504";
-        String orderDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        DateTimeFormatter cmiDateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        String orderDate = LocalDateTime.now().format(cmiDateFormat);
         String expiryDate = LocalDateTime.now().plusHours(24)
-                .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                .format(cmiDateFormat);
 
         GenerateTokenRequest.Item item = new GenerateTokenRequest.Item();
         item.setId(orderId);

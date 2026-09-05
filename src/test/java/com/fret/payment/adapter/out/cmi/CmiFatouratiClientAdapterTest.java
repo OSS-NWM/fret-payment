@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+import static org.hamcrest.Matchers.matchesPattern;
 
 class CmiFatouratiClientAdapterTest {
 
@@ -380,6 +381,8 @@ class CmiFatouratiClientAdapterTest {
                 .andExpect(jsonPath("$.language").value("fr"))
                 .andExpect(jsonPath("$.orderDate").exists())
                 .andExpect(jsonPath("$.expiryDate").exists())
+                .andExpect(jsonPath("$.orderDate").value(matchesPattern("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}")))
+                .andExpect(jsonPath("$.expiryDate").value(matchesPattern("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}")))
                 .andExpect(jsonPath("$.orderLinks.callbackURL").exists())
                 .andExpect(jsonPath("$.orderLinks.cancelURL").exists())
                 .andExpect(jsonPath("$.orderLinks.checkStatusURL").exists())

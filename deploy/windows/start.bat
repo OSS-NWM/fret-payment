@@ -54,4 +54,7 @@ java -jar "%~dp0%JAR_FILE%" ^
     --app.fatourati.cashier-id=%FATOURATI_CASHIER_ID% ^
     --app.fatourati.callback-url=%FATOURATI_CALLBACK_URL% ^
     --app.fatourati.callback-secret=%FATOURATI_CALLBACK_SECRET% ^
+    --app.fatourati.client-name=%FATOURATI_CLIENT_NAME% ^
+    --app.fatourati.client-email=%FATOURATI_CLIENT_EMAIL% ^
+    --app.fatourati.client-phone=%FATOURATI_CLIENT_PHONE% ^
     --app.fatourati.token-ttl-minutes=%FATOURATI_TOKEN_TTL%

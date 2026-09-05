@@ -22,6 +22,9 @@ public class CmiProperties {
     private String storeApiKey;
     private String callbackUrl;
     private String callbackSecret;
+    private String clientName = "Client Nador West Med";
+    private String clientEmail = "client.test@example.com";
+    private String clientPhone = "+212600000000";
     private int tokenTtlMinutes = 60;
     private int connectionTimeoutSeconds = 10;
     private int readTimeoutSeconds = 30;

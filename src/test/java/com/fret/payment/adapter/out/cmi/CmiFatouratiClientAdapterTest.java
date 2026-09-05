@@ -207,14 +207,14 @@ class CmiFatouratiClientAdapterTest {
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header("Authorization", "Bearer test-access-token"))
                 .andRespond(withSuccess("""
-                        {"tokenRef":"TOKEN-GET","orderId":"MV-123","amount":"150.50","currency":"504","status":"SUCCESS","expiresAt":"2025-12-31T23:59:00","qrcode":"base64qr","channels":["MOBILE_MONEY","CARD"]}
+                        {"tokenRef":"TOKEN-GET","orderId":"MV-123","amount":"150.50","currency":"504","status":"SUCCESS","expiresAt":"2025-12-31T23:59:00","totalAmount":150.50,"paidAmount":0}
                         """, MediaType.APPLICATION_JSON));
 
         FatouratiToken token = adapter.getTokenByRef("TOKEN-GET");
 
         assertThat(token.getTokenRef()).isEqualTo("TOKEN-GET");
-        assertThat(token.getQrCode()).isEqualTo("base64qr");
-        assertThat(token.getChannels()).containsExactly("MOBILE_MONEY", "CARD");
+        assertThat(token.getTotalAmount()).isEqualByComparingTo("150.50");
+        assertThat(token.getCurrency()).isEqualTo("504");
         mockServer.verify();
     }
 
@@ -289,12 +289,12 @@ class CmiFatouratiClientAdapterTest {
         mockSuccessfulOAuth();
         mockServer.expect(requestTo("https://agg-merchant-qa.cmi.co.ma/api/v1/merchants/100024/stores/100030/tokens/TOKEN-CH"))
                 .andRespond(withSuccess("""
-                        {"tokenRef":"TOKEN-CH","status":"SUCCESS","channels":["CARD","MOBILE_MONEY"]}
+                        {"tokenRef":"TOKEN-CH","status":"SUCCESS","orderId":"MV-CH"}
                         """, MediaType.APPLICATION_JSON));
 
         List<String> channels = adapter.getChannels("TOKEN-CH");
 
-        assertThat(channels).containsExactly("CARD", "MOBILE_MONEY");
+        assertThat(channels).isEmpty();
     }
 
     @Test
@@ -312,11 +312,102 @@ class CmiFatouratiClientAdapterTest {
         mockSuccessfulOAuth();
         mockServer.expect(requestTo("https://agg-merchant-qa.cmi.co.ma/api/v1/merchants/100024/stores/100030/tokens/TOKEN-QR"))
                 .andRespond(withSuccess("""
-                        {"tokenRef":"TOKEN-QR","status":"SUCCESS","qrcode":"data:image/png;base64,ABCD","channels":["CARD"]}
+                        {"tokenRef":"TOKEN-QR","status":"SUCCESS","orderId":"MV-QR"}
                         """, MediaType.APPLICATION_JSON));
 
         FatouratiToken token = adapter.getTokenByRef("TOKEN-QR");
 
-        assertThat(token.getQrCode()).isEqualTo("data:image/png;base64,ABCD");
+        assertThat(token.getTokenRef()).isEqualTo("TOKEN-QR");
+        assertThat(token.getQrCode()).isNull();
+    }
+
+    @Test
+    void generateToken_sendsFullCmiSpecRequestBody() {
+        props.setClientName("Client Nador West Med");
+        props.setClientEmail("contact@nadorwestmed.ma");
+        props.setClientPhone("+212600000000");
+
+        adapter = new CmiFatouratiClientAdapter(props, signatureUtil, restTemplate, objectMapper, null);
+        mockServer = MockRestServiceServer.bindTo(restTemplate).build();
+
+        mockSuccessfulOAuth();
+        mockServer.expect(requestTo("https://agg-merchant-qa.cmi.co.ma/api/v1/merchants/100024/stores/100030/token"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.orderId").value("MV-123"))
+                .andExpect(jsonPath("$.totalAmount").value(100.00))
+                .andExpect(jsonPath("$.currency").value("504"))
+                .andExpect(jsonPath("$.cashierId").value("001"))
+                .andExpect(jsonPath("$.paymentMode").value("MULTI_CANAL"))
+                .andExpect(jsonPath("$.paymentType").value("TOTAL"))
+                .andExpect(jsonPath("$.countryCode").value("MA"))
+                .andExpect(jsonPath("$.autoConfirmPayment").value(false))
+                .andExpect(jsonPath("$.isCancellable").value(true))
+                .andExpect(jsonPath("$.generateQrCode").value(true))
+                .andExpect(jsonPath("$.language").value("fr"))
+                .andExpect(jsonPath("$.orderDate").exists())
+                .andExpect(jsonPath("$.expiryDate").exists())
+                .andExpect(jsonPath("$.orderLinks.callbackURL").exists())
+                .andExpect(jsonPath("$.orderLinks.cancelURL").exists())
+                .andExpect(jsonPath("$.orderLinks.checkStatusURL").exists())
+                .andExpect(jsonPath("$.clientInfo.name").value("Client Nador West Med"))
+                .andExpect(jsonPath("$.clientInfo.email").value("contact@nadorwestmed.ma"))
+                .andExpect(jsonPath("$.clientInfo.phoneNumber").value("+212600000000"))
+                .andExpect(jsonPath("$.clientInfo.infoToShow[0].key").value("Facture"))
+                .andExpect(jsonPath("$.items[0].id").value("MV-123"))
+                .andExpect(jsonPath("$.items[0].amount").value(100.00))
+                .andExpect(jsonPath("$.items[0].due").value(true))
+                .andExpect(jsonPath("$.items[0].selected").value(true))
+                .andExpect(jsonPath("$.signature").doesNotExist())
+                .andRespond(withSuccess("""
+                        {"status":"CREATED","orderId":"MV-123","tokenRef":"TOKEN-SPEC"}
+                        """, MediaType.APPLICATION_JSON));
+
+        FatouratiToken token = adapter.generateToken(
+                "MV-123",
+                new BigDecimal("100.00"),
+                "504",
+                "http://localhost:8081/callback",
+                "http://localhost:8081/cancel",
+                "http://localhost:8081/check-status"
+        );
+
+        assertThat(token.getTokenRef()).isEqualTo("TOKEN-SPEC");
+        mockServer.verify();
+    }
+
+    @Test
+    void generateToken_parsesQrCodeAndChannelsFromPostResponse() {
+        String qrDataUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAAD6AQAAAACgl2eQAAAA";
+        mockSuccessfulOAuth();
+        mockServer.expect(requestTo("https://agg-merchant-qa.cmi.co.ma/api/v1/merchants/100024/stores/100030/token"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess(String.format("""
+                        {
+                          "status":"CREATED",
+                          "orderId":"MV-456",
+                          "tokenRef":"TOKEN-QR-POST",
+                          "qrCode":"%s",
+                          "extraData":[{"key":"Type dossier","value":"Autorisation mouvement portuaire"}],
+                          "refPaymentSystems":[
+                            {"description":"OrangeMoney.t","urlSite":null,"urlLogo":"https://x/o.png"},
+                            {"description":"CASHPLUSMobile.t","urlSite":null,"urlLogo":"https://x/c.png"}
+                          ]
+                        }
+                        """, qrDataUri), MediaType.APPLICATION_JSON));
+
+        FatouratiToken token = adapter.generateToken(
+                "MV-456",
+                new BigDecimal("250.00"),
+                "504",
+                "http://localhost:8081/callback",
+                "http://localhost:8081/cancel",
+                "http://localhost:8081/check-status"
+        );
+
+        assertThat(token.getTokenRef()).isEqualTo("TOKEN-QR-POST");
+        assertThat(token.getQrCode()).isEqualTo(qrDataUri);
+        assertThat(token.getChannels()).containsExactly("OrangeMoney.t", "CASHPLUSMobile.t");
+        assertThat(token.getOrderId()).isEqualTo("MV-456");
     }
 }

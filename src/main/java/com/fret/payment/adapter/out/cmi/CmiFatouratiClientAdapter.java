@@ -84,45 +84,53 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
                 + "/merchants/" + props.getMerchantCode()
                 + "/stores/" + props.getStore() + "/token";
 
-        String amountStr = signatureUtil.formatAmount(amount);
+        String currencyFinal = currency != null ? currency : "504";
+        String orderDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         String expiryDate = LocalDateTime.now().plusHours(24)
                 .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
-        String signatureData = signatureUtil.buildTokenGenSignatureData(
-                amountStr,
-                currency != null ? currency : "504",
-                props.getMerchantCode(),
-                props.getStore(),
-                orderId,
-                props.getCashierId(),
-                "MULTI_CANAL",
-                "0",
-                expiryDate,
-                props.getStoreApiKey()
-        );
-        String signature = signatureUtil.computeSignature(signatureData, props.getStoreApiKey());
-
-        GenerateTokenRequest.TokenItem item = new GenerateTokenRequest.TokenItem();
+        GenerateTokenRequest.Item item = new GenerateTokenRequest.Item();
         item.setId(orderId);
         item.setAmount(amount);
         item.setDescription("Paiement AM Nador West Med");
         item.setDue(true);
         item.setSelected(true);
 
+        GenerateTokenRequest.ClientInfo clientInfo = new GenerateTokenRequest.ClientInfo();
+        clientInfo.setName(props.getClientName());
+        clientInfo.setEmail(props.getClientEmail());
+        clientInfo.setPhoneNumber(props.getClientPhone());
+        clientInfo.setInfoToShow(List.of(
+                new GenerateTokenRequest.InfoToShow("Facture", orderId)
+        ));
+
+        GenerateTokenRequest.OrderLinks orderLinks = new GenerateTokenRequest.OrderLinks();
+        orderLinks.setCallbackURL(callbackUrl);
+        orderLinks.setCheckStatusURL(checkStatusUrl);
+        orderLinks.setCancelURL(cancelUrl);
+
+        GenerateTokenRequest.ExtraData extraData = new GenerateTokenRequest.ExtraData();
+        extraData.setKey("Type dossier");
+        extraData.setValue("Autorisation mouvement portuaire");
+
         GenerateTokenRequest request = new GenerateTokenRequest();
         request.setOrderId(orderId);
+        request.setOrderDate(orderDate);
         request.setTotalAmount(amount);
-        request.setCurrency(currency != null ? currency : "504");
-        request.setCashierId(props.getCashierId());
+        request.setCurrency(currencyFinal);
         request.setPaymentMode("MULTI_CANAL");
+        request.setPaymentType("TOTAL");
+        request.setCashierId(props.getCashierId());
         request.setItems(List.of(item));
+        request.setClientInfo(clientInfo);
+        request.setCountryCode("MA");
+        request.setOrderLinks(orderLinks);
+        request.setAutoConfirmPayment(false);
         request.setIsCancellable(true);
         request.setGenerateQrCode(true);
         request.setExpiryDate(expiryDate);
-        request.setCallbackUrl(callbackUrl);
-        request.setCancelUrl(cancelUrl);
-        request.setCheckStatusUrl(checkStatusUrl);
-        request.setSignature(signature);
+        request.setLanguage("fr");
+        request.setExtraData(List.of(extraData));
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -140,48 +148,35 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
                 throw new RuntimeException("Empty response from CMI generateToken");
             }
 
-            log.info("[CMI] Token generated: tokenRef={}", body.getTokenRef());
+            log.info("[CMI] Token generated: tokenRef={}, qrCodePresent={}",
+                    body.getTokenRef(), body.getQrCode() != null);
 
-            FatouratiToken partial = FatouratiToken.builder()
+            List<String> channels = body.getRefPaymentSystems() != null
+                    ? body.getRefPaymentSystems().stream()
+                        .map(GenerateTokenResponse.RefPaymentSystem::getDescription)
+                        .filter(Objects::nonNull)
+                        .toList()
+                    : List.of();
+
+            LocalDateTime expiresAt = parseDateTime(expiryDate);
+
+            return FatouratiToken.builder()
                     .tokenRef(body.getTokenRef())
                     .orderId(body.getOrderId() != null ? body.getOrderId() : orderId)
                     .totalAmount(amount)
-                    .currency(currency != null ? currency : "504")
+                    .currency(currencyFinal)
+                    .qrCode(body.getQrCode())
+                    .channels(channels)
+                    .expiresAt(expiresAt)
                     .status(parseTokenStatus(body.getStatus()))
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
                     .build();
 
-            return enrichTokenFromGetToken(partial);
-
         } catch (HttpClientErrorException e) {
             log.error("[CMI] generateToken failed: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new RuntimeException("CMI generateToken failed: " + e.getStatusCode(), e);
         }
-    }
-
-    private FatouratiToken enrichTokenFromGetToken(FatouratiToken partial) {
-        try {
-            FatouratiToken enriched = getTokenByRef(partial.getTokenRef());
-            if (enriched != null) {
-                enriched.setMouvementId(partial.getMouvementId());
-                enriched.setTotalAmount(partial.getTotalAmount());
-                enriched.setCurrency(partial.getCurrency());
-                enriched.setStatus(partial.getStatus());
-                enriched.setCreatedAt(partial.getCreatedAt());
-                enriched.setUpdatedAt(LocalDateTime.now());
-                log.info("[CMI] Token enriched via getTokenByRef: tokenRef={}, qrCode present={}, channels={}",
-                        enriched.getTokenRef(), enriched.getQrCode() != null,
-                        enriched.getChannels() != null ? enriched.getChannels().size() : 0);
-                return enriched;
-            }
-        } catch (Exception e) {
-            log.warn("[CMI] Could not enrich token via getTokenByRef: {}", e.getMessage());
-        }
-        partial.setQrCode(null);
-        partial.setChannels(List.of());
-        partial.setExpiresAt(LocalDateTime.now().plusHours(24));
-        return partial;
     }
 
     @Override
@@ -209,8 +204,6 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
                     .currency(body.getCurrency())
                     .status(parseTokenStatus(body.getStatus()))
                     .expiresAt(parseDateTime(body.getExpiresAt()))
-                    .channels(body.getChannels())
-                    .qrCode(body.getQrcode())
                     .build();
 
         } catch (HttpClientErrorException e) {
@@ -244,8 +237,6 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
                     .currency(body.getCurrency())
                     .status(parseTokenStatus(body.getStatus()))
                     .expiresAt(parseDateTime(body.getExpiresAt()))
-                    .channels(body.getChannels())
-                    .qrCode(body.getQrcode())
                     .build();
 
         } catch (HttpClientErrorException e) {
@@ -357,29 +348,72 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
     @AllArgsConstructor
     private static class GenerateTokenRequest {
         private String orderId;
+        private String orderDate;
         private BigDecimal totalAmount;
         private String currency;
-        private String cashierId;
         private String paymentMode = "MULTI_CANAL";
-        private List<TokenItem> items;
+        private String paymentType = "TOTAL";
+        private String cashierId;
+        private List<Item> items;
+        private ClientInfo clientInfo;
+        private String countryCode;
+        private OrderLinks orderLinks;
+        private Boolean autoConfirmPayment = false;
         private Boolean isCancellable = true;
         private Boolean generateQrCode = true;
         private String expiryDate;
-        @JsonProperty("callbackURL") private String callbackUrl;
-        @JsonProperty("cancelURL") private String cancelUrl;
-        @JsonProperty("checkStatusURL") private String checkStatusUrl;
-        private String signature;
+        private String language;
+        private List<ExtraData> extraData;
 
         @Getter
         @Setter
         @NoArgsConstructor
         @AllArgsConstructor
-        private static class TokenItem {
+        public static class Item {
             private String id;
             private BigDecimal amount;
             private String description;
             private Boolean due = true;
             private Boolean selected = true;
+        }
+
+        @Getter
+        @Setter
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class ClientInfo {
+            private String name;
+            private String email;
+            private String phoneNumber;
+            private List<InfoToShow> infoToShow;
+        }
+
+        @Getter
+        @Setter
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class InfoToShow {
+            private String key;
+            private String value;
+        }
+
+        @Getter
+        @Setter
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class OrderLinks {
+            @JsonProperty("callbackURL") private String callbackURL;
+            @JsonProperty("checkStatusURL") private String checkStatusURL;
+            @JsonProperty("cancelURL") private String cancelURL;
+        }
+
+        @Getter
+        @Setter
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class ExtraData {
+            private String key;
+            private String value;
         }
     }
 
@@ -390,6 +424,26 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
         @JsonProperty("status") private String status;
         @JsonProperty("orderId") private String orderId;
         @JsonProperty("tokenRef") private String tokenRef;
+        @JsonProperty("qrCode") private String qrCode;
+        @JsonProperty("extraData") private List<ExtraData> extraData;
+        @JsonProperty("refPaymentSystems") private List<RefPaymentSystem> refPaymentSystems;
+
+        @Getter
+        @Setter
+        @NoArgsConstructor
+        public static class ExtraData {
+            @JsonProperty("key") private String key;
+            @JsonProperty("value") private String value;
+        }
+
+        @Getter
+        @Setter
+        @NoArgsConstructor
+        public static class RefPaymentSystem {
+            @JsonProperty("description") private String description;
+            @JsonProperty("urlSite") private String urlSite;
+            @JsonProperty("urlLogo") private String urlLogo;
+        }
     }
 
     @Getter

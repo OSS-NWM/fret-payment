@@ -8,6 +8,12 @@ import com.fret.payment.application.service.payment.ConfirmFatouratiPaymentServi
 import com.fret.payment.domain.model.payment.FatouratiPaymentCallback;
 import com.fret.payment.domain.model.payment.FatouratiTokenStatus;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +30,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/payment/fatourati")
 @RequiredArgsConstructor
+@Tag(name = "CMI Webhooks", description = "Public signature-verified webhooks called by CMI for payment confirmation, cancellation and status polling")
 public class FatouratiCallbackController {
 
     private final ConfirmFatouratiPaymentService confirmService;
@@ -33,6 +40,14 @@ public class FatouratiCallbackController {
     private final ObjectMapper objectMapper;
 
     @PostMapping("/callback")
+    @Operation(
+            summary = "CMI payment confirmation webhook",
+            description = "Called by CMI when a payment is confirmed. Verifies the payment decision and notifies fret-management. "
+                    + "Signature verification is performed internally — x-signature header is forwarded by CMI."
+    )
+    @ApiResponse(responseCode = "200", description = "Payment confirmed or already processed",
+            content = @Content(schema = @Schema(example = "{\"receiptNumber\": \"1000300000071\"}")))
+    @ApiResponse(responseCode = "400", description = "Invalid body or signature verification failed")
     public ResponseEntity<?> callback(
             @RequestBody String rawBody,
             @RequestHeader(value = "x-signature", required = false) String signature
@@ -87,6 +102,12 @@ public class FatouratiCallbackController {
     }
 
     @GetMapping("/check-status")
+    @Operation(
+            summary = "CMI status polling endpoint",
+            description = "Called by CMI to check the payment status of a token. Returns one of: PAID, CANCELLED, EXPIRED, NOT_FOUND, PENDING."
+    )
+    @ApiResponse(responseCode = "200", description = "Status returned",
+            content = @Content(schema = @Schema(example = "{\"status\": \"PAID\"}")))
     public ResponseEntity<?> checkStatus(
             @RequestParam(value = "token_ref") String tokenRef,
             @RequestParam(value = "order_id", required = false) String orderId
@@ -114,6 +135,13 @@ public class FatouratiCallbackController {
     }
 
     @PostMapping("/cancel")
+    @Operation(
+            summary = "CMI cancel webhook",
+            description = "Called by CMI when a payment is cancelled. Verifies the cancel request signature before processing. "
+                    + "x-signature header is required."
+    )
+    @ApiResponse(responseCode = "200", description = "Cancel processed successfully")
+    @ApiResponse(responseCode = "400", description = "Missing signature, invalid body, or signature verification failed")
     public ResponseEntity<?> cancel(
             @RequestBody String rawBody,
             @RequestHeader(value = "x-signature", required = false) String signature

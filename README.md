@@ -48,3 +48,29 @@ CMI sandbox credentials are defaults in `application.properties` — rotate befo
 | POST | `/api/payment/fatourati/mouvement/{id}/paiement/fatourati` | JWT | Initiate payment for a mouvement |
 | GET | `/api/payment/fatourati/mouvement/{id}/paiement/fatourati/status` | JWT | Get payment status |
 | DELETE | `/api/payment/fatourati/mouvement/{id}/paiement/fatourati` | JWT | Cancel payment |
+
+## API Documentation (Swagger/OpenAPI)
+
+Interactive API docs are available once the service is running:
+
+```bash
+# Local
+http://localhost:8082/swagger-ui.html
+
+# Raw OpenAPI JSON
+http://localhost:8082/v3/api-docs
+```
+
+**JWT roles required** (for protected endpoints): `OPERATEUR_COMMUNITY`, `AGENT_FACTURATION_NWM`, `RESPONSABLE_FACTURATION_NWM`
+
+**Public endpoints** (signature-verified, no JWT): `/callback`, `/cancel`, `/check-status`
+
+**Base URL for all endpoints**: `/api/payment/fatourati`
+
+### JWT format
+
+```json
+Authorization: Bearer <keycloak-jwt>
+```
+
+Use the Keycloak realm `fret-management-client` to obtain a token via `client_credentials` or `password` grant.

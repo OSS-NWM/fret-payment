@@ -29,7 +29,7 @@ public class InvoiceInfoHttpAdapter implements InvoiceInfoPort {
     @SuppressWarnings("unchecked")
     public List<InvoiceInfo> findByMouvementId(String mouvementId) {
         try {
-            String url = fretManagementBaseUrl + "/api/invoices/mouvement/" + mouvementId;
+            String url = fretManagementBaseUrl + "/api/internal/invoices/mouvement/" + mouvementId;
             Object response = restTemplate.getForObject(url, Object.class);
 
             List<InvoiceInfo> result = new ArrayList<>();
@@ -38,7 +38,7 @@ public class InvoiceInfoHttpAdapter implements InvoiceInfoPort {
                     if (item instanceof Map) {
                         Map<String, Object> map = (Map<String, Object>) item;
                         InvoiceInfo info = InvoiceInfo.builder()
-                                .id(map.get("id") != null ? map.get("id").toString() : null)
+                                .id(map.get("idHeader") != null ? map.get("idHeader").toString() : null)
                                 .mouvementId(mouvementId)
                                 .montantTtc(parseBigDecimal(map.get("montantTtc")))
                                 .build();

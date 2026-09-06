@@ -35,7 +35,10 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/payment/fatourati/callback",
                                 "/api/payment/fatourati/check-status",
-                                "/api/payment/fatourati/cancel"
+                                "/api/payment/fatourati/cancel",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
                         ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated()

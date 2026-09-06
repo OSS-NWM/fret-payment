@@ -8,6 +8,13 @@ import com.fret.payment.application.service.payment.InitiateFatouratiPaymentServ
 import com.fret.payment.application.service.payment.QueryFatouratiStatusService;
 import com.fret.payment.domain.model.payment.FatouratiToken;
 import com.fret.payment.domain.model.payment.FatouratiTransactionStatus;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +28,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/payment/fatourati")
 @RequiredArgsConstructor
+@Tag(name = "Fatourati Payments", description = "CMI Fatourati payment token lifecycle management")
+@SecurityRequirement(name = "bearerAuth")
 public class FatouratiPaymentController {
 
     private final InitiateFatouratiPaymentService initiateService;
@@ -29,7 +38,19 @@ public class FatouratiPaymentController {
 
     @PostMapping("/mouvement/{mouvementId}/paiement/fatourati")
     @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
-    public ResponseEntity<?> initiatePayment(@PathVariable String mouvementId) {
+    @Operation(
+            summary = "Initiate a Fatourati payment",
+            description = "Creates a CMI Fatourati payment token for the given mouvement. "
+                    + "Fetches the invoice amount from fret-management, generates a CMI token, and returns QR code + payment channels."
+    )
+    @ApiResponse(responseCode = "200", description = "Token created successfully",
+            content = @Content(schema = @Schema(implementation = FatouratiTokenResponseDto.class)))
+    @ApiResponse(responseCode = "400", description = "CMI rejected the request (signature or parameter error)")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
+    @ApiResponse(responseCode = "403", description = "Insufficient role permissions")
+    public ResponseEntity<?> initiatePayment(
+            @Parameter(description = "Mouvement ID (e.g. AMI-202607000001)", example = "AMI-202607000001")
+            @PathVariable String mouvementId) {
         log.info("[FATOURATI_PAY] Initiate payment: mouvementId={}", mouvementId);
 
         FatouratiToken token = initiateService.initiate(mouvementId);
@@ -51,7 +72,17 @@ public class FatouratiPaymentController {
 
     @GetMapping("/mouvement/{mouvementId}/paiement/fatourati/status")
     @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
-    public ResponseEntity<?> getPaymentStatus(@PathVariable String mouvementId) {
+    @Operation(
+            summary = "Get payment status for a mouvement",
+            description = "Returns the current Fatourati token status and payment details."
+    )
+    @ApiResponse(responseCode = "200", description = "Status retrieved",
+            content = @Content(schema = @Schema(implementation = FatouratiStatusResponseDto.class)))
+    @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
+    @ApiResponse(responseCode = "403", description = "Insufficient role permissions")
+    public ResponseEntity<?> getPaymentStatus(
+            @Parameter(description = "Mouvement ID", example = "AMI-202607000001")
+            @PathVariable String mouvementId) {
         log.debug("[FATOURATI_PAY] Status check: mouvementId={}", mouvementId);
 
         FatouratiToken token = queryService.getToken(mouvementId);
@@ -72,7 +103,17 @@ public class FatouratiPaymentController {
 
     @DeleteMapping("/mouvement/{mouvementId}/paiement/fatourati")
     @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
-    public ResponseEntity<?> cancelPayment(@PathVariable String mouvementId) {
+    @Operation(
+            summary = "Cancel a pending Fatourati payment",
+            description = "Cancels the pending Fatourati token for the given mouvement. "
+                    + "Note: cancel is inbound from CMI only — this endpoint is for admin use."
+    )
+    @ApiResponse(responseCode = "200", description = "Payment cancelled")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
+    @ApiResponse(responseCode = "403", description = "Insufficient role permissions")
+    public ResponseEntity<?> cancelPayment(
+            @Parameter(description = "Mouvement ID", example = "AMI-202607000001")
+            @PathVariable String mouvementId) {
         log.info("[FATOURATI_PAY] Cancel payment: mouvementId={}", mouvementId);
 
         cancelService.cancel(mouvementId);

@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.Map;
 
@@ -79,5 +80,27 @@ public class FatouratiPaymentController {
                 "mouvementId", mouvementId,
                 "status", "CANCELLED"
         ));
+    }
+
+    @ExceptionHandler(HttpClientErrorException.class)
+    public ResponseEntity<?> handleHttpClientError(HttpClientErrorException ex) {
+        log.error("[FATOURATI_PAY] CMI HTTP error: {} {}", ex.getStatusCode(), ex.getResponseBodyAsString());
+        return ResponseEntity.status(ex.getStatusCode())
+                .body(Map.of(
+                        "status", ex.getStatusCode().toString(),
+                        "cmiError", ex.getResponseBodyAsString(),
+                        "path", "/api/payment/fatourati"
+                ));
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<?> handleRuntimeError(RuntimeException ex) {
+        log.error("[FATOURATI_PAY] Runtime error: {}", ex.getMessage());
+        return ResponseEntity.status(500)
+                .body(Map.of(
+                        "error", ex.getMessage(),
+                        "type", ex.getClass().getSimpleName(),
+                        "path", "/api/payment/fatourati"
+                ));
     }
 }

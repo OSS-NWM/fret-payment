@@ -2,6 +2,7 @@ package com.fret.payment.adapter.in.rest.payment;
 
 import com.fret.payment.adapter.in.rest.payment.dto.FatouratiStatusResponseDto;
 import com.fret.payment.adapter.in.rest.payment.dto.FatouratiTokenResponseDto;
+import com.fret.payment.adapter.out.cmi.CmiSignatureException;
 import com.fret.payment.application.service.payment.CancelFatouratiPaymentService;
 import com.fret.payment.application.service.payment.InitiateFatouratiPaymentService;
 import com.fret.payment.application.service.payment.QueryFatouratiStatusService;
@@ -89,6 +90,20 @@ public class FatouratiPaymentController {
                 .body(Map.of(
                         "status", ex.getStatusCode().toString(),
                         "cmiError", ex.getResponseBodyAsString(),
+                        "path", "/api/payment/fatourati"
+                ));
+    }
+
+    @ExceptionHandler(CmiSignatureException.class)
+    public ResponseEntity<?> handleCmiSignatureError(CmiSignatureException ex) {
+        log.error("[FATOURATI_PAY] CMI signature error: {}", ex.getMessage());
+        HttpClientErrorException cause = (HttpClientErrorException) ex.getCause();
+        return ResponseEntity.status(cause.getStatusCode())
+                .body(Map.of(
+                        "status", cause.getStatusCode().toString(),
+                        "cmiError", cause.getResponseBodyAsString(),
+                        "signatureData", ex.getSignatureData(),
+                        "signatureValue", ex.getSignatureValue(),
                         "path", "/api/payment/fatourati"
                 ));
     }

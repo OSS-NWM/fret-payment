@@ -91,8 +91,8 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
 
         String currencyFinal = currency != null ? currency : "504";
         DateTimeFormatter cmiDateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-        String orderDate = LocalDateTime.now(ZoneOffset.UTC).format(cmiDateFormat);
-        String expiryDate = LocalDateTime.now(ZoneOffset.UTC).plusHours(24)
+        String orderDate = LocalDateTime.now(ZoneId.of("Africa/Casablanca")).format(cmiDateFormat);
+        String expiryDate = LocalDateTime.now(ZoneId.of("Africa/Casablanca")).plusHours(24)
                 .format(cmiDateFormat);
 
         GenerateTokenRequest.Item item = new GenerateTokenRequest.Item();
@@ -158,6 +158,13 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
         log.info("[CMI] Signature data: '{}'", sigData);
         log.info("[CMI] x-signature algorithm: {}, value: {}", props.getSignatureAlgorithm(), signature);
         request.setExtraData(List.of(extraData));
+
+        try {
+            String requestJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
+            log.info("[CMI] Full request body:\n{}", requestJson);
+        } catch (Exception e) {
+            log.warn("[CMI] Could not serialize request body: {}", e.getMessage());
+        }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

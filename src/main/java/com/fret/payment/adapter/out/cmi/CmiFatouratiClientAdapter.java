@@ -201,7 +201,7 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
 
         } catch (HttpClientErrorException e) {
             log.error("[CMI] generateToken failed: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new RuntimeException("CMI generateToken failed: " + e.getStatusCode(), e);
+            throw e; // rethrow HttpClientErrorException so controller's handler catches it with full CMI body
         }
     }
 

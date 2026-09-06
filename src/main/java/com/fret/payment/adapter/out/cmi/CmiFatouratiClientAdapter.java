@@ -97,7 +97,7 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
 
         GenerateTokenRequest.Item item = new GenerateTokenRequest.Item();
         item.setId(orderId);
-        item.setAmount(amount);
+        item.setAmount(signatureUtil.formatAmount(amount));
         item.setDescription("Paiement AM Nador West Med");
         item.setDue(true);
         item.setSelected(true);
@@ -122,7 +122,7 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
         GenerateTokenRequest request = new GenerateTokenRequest();
         request.setOrderId(orderId);
         request.setOrderDate(orderDate);
-        request.setTotalAmount(amount);
+        request.setTotalAmount(signatureUtil.formatAmount(amount));
         request.setCurrency(currencyFinal);
         request.setPaymentMode("MULTI_CANAL");
         request.setPaymentType("TOTAL");
@@ -389,7 +389,7 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
     private static class GenerateTokenRequest {
         private String orderId;
         private String orderDate;
-        private BigDecimal totalAmount;
+        private String totalAmount;
         private String currency;
         private String paymentMode = "MULTI_CANAL";
         private String paymentType = "TOTAL";
@@ -411,7 +411,7 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
         @AllArgsConstructor
         public static class Item {
             private String id;
-            private BigDecimal amount;
+            private String amount;
             private String description;
             private Boolean due = true;
             private Boolean selected = true;

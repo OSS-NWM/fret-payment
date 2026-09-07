@@ -37,6 +37,16 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
 
         boolean signatureValid = verifyCallbackSignature(callback);
 
+        if (!signatureValid) {
+            log.warn("[FATOURATI_CONFIRM] Invalid signature for tokenRef={}", callback.getTokenRef());
+            callbackLogRepository.logCallback(
+                    callback.getTokenRef(), callback.getPaymentSystemTransactionNumber(),
+                    callback.getFatouratiTransactionNumber(), callback.getPaymentSystemTransactionNumber(),
+                    callback.getTotalAmount(), rawBody, signatureValid,
+                    callback.getDecisionCode(), "INVALID_SIGNATURE");
+            return "3";
+        }
+
         if (callbackLogRepository.isCallbackProcessed(callback.getFatouratiTransactionNumber())) {
             log.info("[FATOURATI_CONFIRM] Callback already processed: numTrx={}",
                     callback.getFatouratiTransactionNumber());
@@ -53,11 +63,6 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
                 callback.getFatouratiTransactionNumber(), callback.getPaymentSystemTransactionNumber(),
                 callback.getTotalAmount(), rawBody, signatureValid,
                 callback.getDecisionCode(), null);
-
-        if (!signatureValid) {
-            log.warn("[FATOURATI_CONFIRM] Invalid signature for tokenRef={}", callback.getTokenRef());
-            return "3";
-        }
 
         var tokenOpt = tokenRepository.findByTokenRef(callback.getTokenRef());
         if (tokenOpt.isEmpty()) {

@@ -22,6 +22,8 @@ public class CmiProperties {
     private String store;
     private String storeApiKey;
     private String callbackUrl;
+    private String cancelUrl;
+    private String checkStatusUrl;
     private String callbackSecret;
     private String signatureAlgorithm = "HMAC-SHA256";
     private String clientName = "Client Nador West Med";

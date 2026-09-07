@@ -74,3 +74,27 @@ Authorization: Bearer <keycloak-jwt>
 ```
 
 Use the Keycloak realm `fret-management-client` to obtain a token via `client_credentials` or `password` grant.
+
+## Callback Configuration
+
+CMI calls back to three URLs that are embedded in every token creation request. These **must** point to the publicly accessible address of the `fret-payment` backend — not a proxy.
+
+| Property | Env Variable | Purpose |
+|----------|-------------|---------|
+| `callbackUrl` | `FATOURATI_CALLBACK_URL` | CMI calls this on payment confirmation |
+| `cancelUrl` | `FATOURATI_CANCEL_URL` | CMI calls this on payment cancellation |
+| `checkStatusUrl` | `FATOURATI_CHECK_STATUS_URL` | CMI polls this for status updates |
+
+All three are sent to CMI in the `generateToken` request inside `orderLinks`:
+
+```json
+{
+  "orderLinks": {
+    "callbackURL": "http://51.170.134.229:8000/api/payment/fatourati/callback",
+    "cancelURL": "http://51.170.134.229:8000/api/payment/fatourati/cancel",
+    "checkStatusURL": "http://51.170.134.229:8000/api/payment/fatourati/check-status"
+  }
+}
+```
+
+**Windows deploy** (`deploy/windows/setenv.bat`): all three URLs are set explicitly (not derived by string replacement). CMI must be able to reach these URLs from the internet.

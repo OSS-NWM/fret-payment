@@ -38,8 +38,8 @@ public class InitiateFatouratiPaymentService implements InitiateFatouratiPayment
         BigDecimal amount = extractAmount(mouvementId);
         String currency = "504";
         String callbackUrl = cmiProperties.getCallbackUrl();
-        String cancelUrl = cmiProperties.getCallbackUrl().replace("/callback", "/cancel");
-        String checkStatusUrl = cmiProperties.getCallbackUrl().replace("/callback", "/check-status");
+        String cancelUrl = cmiProperties.getCancelUrl();
+        String checkStatusUrl = cmiProperties.getCheckStatusUrl();
 
         FatouratiToken token = cmiClient.generateToken(
                 mouvementId,

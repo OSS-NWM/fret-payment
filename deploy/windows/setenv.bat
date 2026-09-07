@@ -33,7 +33,12 @@ set FATOURATI_STORE=100030
 set FATOURATI_STORE_API_KEY=6HQ7F3HTPNF12IDEQVQDHU0YJ6UAS9P5
 set FATOURATI_SIGNATURE_ALGORITHM=HMAC-SHA256
 set FATOURATI_CASHIER_ID=1
+rem ─── CMI Webhook Callback URLs (must be publicly accessible from CMI) ───
+rem These URLs are sent to CMI in the token request. CMI calls them on payment events.
+rem Point to THIS machine's fret-payment backend (port 8000), not the proxy.
 set FATOURATI_CALLBACK_URL=http://51.170.134.229:8000/api/payment/fatourati/callback
+set FATOURATI_CANCEL_URL=http://51.170.134.229:8000/api/payment/fatourati/cancel
+set FATOURATI_CHECK_STATUS_URL=http://51.170.134.229:8000/api/payment/fatourati/check-status
 set FATOURATI_CALLBACK_SECRET=w23M2dC0VFRYughLe8z9TCEbIdFNhKCKDLW
 set FATOURATI_CLIENT_NAME=Client Nador West Med
 set FATOURATI_CLIENT_EMAIL=contact@nadorwestmed.ma

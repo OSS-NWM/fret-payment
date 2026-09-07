@@ -49,6 +49,12 @@ public class FatouratiTokenEntity {
     @Column(name = "channels", columnDefinition = "jsonb")
     private List<String> channels;
 
+    @Column(name = "payment_channel", length = 64)
+    private String paymentChannel;
+
+    @Column(name = "payment_operator", length = 64)
+    private String paymentOperator;
+
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 

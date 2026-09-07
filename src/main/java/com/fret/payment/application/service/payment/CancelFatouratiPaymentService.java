@@ -19,7 +19,11 @@ public class CancelFatouratiPaymentService implements CancelFatouratiPaymentUseC
 
     @Override
     public void cancel(String mouvementId) {
-        log.info("[FATOURATI_CANCEL] Cancelling payment for mouvementId={}", mouvementId);
+        cancel(mouvementId, "CMI_WEBHOOK");
+    }
+
+    public void cancel(String mouvementId, String actor) {
+        log.info("[FATOURATI_CANCEL] Cancelling payment for mouvementId={}, actor={}", mouvementId, actor);
 
         Optional<FatouratiToken> tokenOpt = tokenRepository.findActiveByMouvementId(mouvementId);
         if (tokenOpt.isEmpty()) {
@@ -28,9 +32,17 @@ public class CancelFatouratiPaymentService implements CancelFatouratiPaymentUseC
         }
 
         var token = tokenOpt.get();
-        tokenRepository.updateStatus(token.getTokenRef(), FatouratiTokenStatus.CANCELLED);
-        log.info("[FATOURATI_CANCEL] Token cancelled locally: tokenRef={}, mouvementId={}",
-                token.getTokenRef(), mouvementId);
+        tokenRepository.recordTransition(
+                token.getTokenRef(),
+                token.getStatus(),
+                FatouratiTokenStatus.CANCELLED,
+                "USER_CANCEL",
+                actor,
+                null,
+                null
+        );
+        log.info("[FATOURATI_CANCEL] Token cancelled: tokenRef={}, mouvementId={}, actor={}",
+                token.getTokenRef(), mouvementId, actor);
     }
 
     public Optional<FatouratiToken> getTokenForStatus(String tokenRef) {

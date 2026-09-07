@@ -22,6 +22,8 @@ public class FatouratiToken {
     private FatouratiTokenStatus status;
     private String qrCode;
     private List<String> channels;
+    private String paymentChannel;
+    private String paymentOperator;
     private LocalDateTime expiresAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

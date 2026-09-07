@@ -3,6 +3,8 @@ package com.fret.payment.adapter.in.rest.payment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fret.payment.adapter.out.cmi.CmiProperties;
 import com.fret.payment.adapter.out.cmi.CmiSignatureUtil;
+import com.fret.payment.adapter.out.persistance.adapter.FatouratiTokenRepositoryAdapter;
+import com.fret.payment.adapter.out.persistance.adapter.FatouratiTokenStatusHistoryRepositoryAdapter;
 import com.fret.payment.application.service.payment.CancelFatouratiPaymentService;
 import com.fret.payment.application.service.payment.ConfirmFatouratiPaymentService;
 import com.fret.payment.domain.model.payment.FatouratiToken;
@@ -39,6 +41,10 @@ class FatouratiCallbackControllerTest {
     private CmiSignatureUtil signatureUtil;
     @Mock
     private CmiProperties cmiProperties;
+    @Mock
+    private FatouratiTokenRepositoryAdapter tokenRepository;
+    @Mock
+    private FatouratiTokenStatusHistoryRepositoryAdapter historyRepository;
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
@@ -47,7 +53,8 @@ class FatouratiCallbackControllerTest {
     void setUp() {
         objectMapper = new ObjectMapper();
         FatouratiCallbackController controller = new FatouratiCallbackController(
-                confirmService, cancelService, signatureUtil, cmiProperties, objectMapper);
+                confirmService, cancelService, signatureUtil, cmiProperties, objectMapper,
+                tokenRepository, historyRepository);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 

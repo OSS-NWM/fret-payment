@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -29,6 +30,7 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
     private final FretManagementNotifierPort fretManagementNotifier;
 
     @Override
+    @Transactional
     public String confirmPayment(FatouratiPaymentCallback callback) {
         log.info("[FATOURATI_CONFIRM] Processing callback: tokenRef={}, decisionCode={}, numTrx={}",
                 callback.getTokenRef(), callback.getDecisionCode(), callback.getFatouratiTransactionNumber());
@@ -73,8 +75,16 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
         var token = tokenOpt.get();
 
         if (callback.getDecisionCode() == null || callback.getDecisionCode() == 0) {
-            tokenRepository.updateStatus(callback.getTokenRef(), FatouratiTokenStatus.CONSUMED);
-            log.info("[FATOURATI_CONFIRM] Payment approved: tokenRef={}", callback.getTokenRef());
+            tokenRepository.updateConfirmation(
+                    callback.getTokenRef(),
+                    FatouratiTokenStatus.CONSUMED,
+                    callback.getChannel(),
+                    callback.getOperator(),
+                    "PAYMENT_CONFIRMED",
+                    "CMI_WEBHOOK"
+            );
+            log.info("[FATOURATI_CONFIRM] Payment approved: tokenRef={}, channel={}, operator={}",
+                    callback.getTokenRef(), callback.getChannel(), callback.getOperator());
 
             fretManagementNotifier.notifyPaymentConfirmed(
                     callback.getTokenRef(),
@@ -84,8 +94,26 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
                     callback.getFatouratiTransactionNumber()
             );
         } else if (callback.getDecisionCode() == 1) {
+            tokenRepository.recordTransition(
+                    callback.getTokenRef(),
+                    token.getStatus(),
+                    FatouratiTokenStatus.REJECTED,
+                    "PAYMENT_REFUSED",
+                    "CMI_WEBHOOK",
+                    callback.getChannel(),
+                    callback.getOperator()
+            );
             log.info("[FATOURATI_CONFIRM] Payment refused: tokenRef={}", callback.getTokenRef());
         } else {
+            tokenRepository.recordTransition(
+                    callback.getTokenRef(),
+                    token.getStatus(),
+                    token.getStatus(),
+                    "UNKNOWN_DECISION_CODE",
+                    "CMI_WEBHOOK",
+                    callback.getChannel(),
+                    callback.getOperator()
+            );
             log.warn("[FATOURATI_CONFIRM] Unknown decisionCode={} for tokenRef={}",
                     callback.getDecisionCode(), callback.getTokenRef());
         }

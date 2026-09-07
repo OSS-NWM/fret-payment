@@ -1,12 +1,17 @@
 package com.fret.payment.adapter.in.rest.payment;
 
+import com.fret.payment.adapter.in.rest.payment.dto.FatouratiPaymentHistoryDto;
 import com.fret.payment.adapter.in.rest.payment.dto.FatouratiStatusResponseDto;
 import com.fret.payment.adapter.in.rest.payment.dto.FatouratiTokenResponseDto;
 import com.fret.payment.adapter.out.cmi.CmiSignatureException;
+import com.fret.payment.adapter.out.persistance.adapter.FatouratiTokenStatusHistoryRepositoryAdapter;
+import com.fret.payment.adapter.out.persistance.adapter.FatouratiTokenRepositoryAdapter;
 import com.fret.payment.application.service.payment.CancelFatouratiPaymentService;
 import com.fret.payment.application.service.payment.InitiateFatouratiPaymentService;
 import com.fret.payment.application.service.payment.QueryFatouratiStatusService;
 import com.fret.payment.domain.model.payment.FatouratiToken;
+import com.fret.payment.domain.model.payment.FatouratiTokenStatus;
+import com.fret.payment.domain.model.payment.FatouratiTokenStatusHistory;
 import com.fret.payment.domain.model.payment.FatouratiTransactionStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -19,6 +24,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 
@@ -35,6 +42,8 @@ public class FatouratiPaymentController {
     private final InitiateFatouratiPaymentService initiateService;
     private final QueryFatouratiStatusService queryService;
     private final CancelFatouratiPaymentService cancelService;
+    private final FatouratiTokenRepositoryAdapter tokenRepository;
+    private final FatouratiTokenStatusHistoryRepositoryAdapter historyRepository;
 
     @PostMapping("/mouvement/{mouvementId}/paiement/fatourati")
     @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
@@ -106,15 +115,28 @@ public class FatouratiPaymentController {
     @Operation(
             summary = "Cancel a pending Fatourati payment",
             description = "Cancels the pending Fatourati token for the given mouvement. "
-                    + "Note: cancel is inbound from CMI only — this endpoint is for admin use."
+                    + "Admin-only action — writes a status history entry with the cancelling user's identity."
     )
     @ApiResponse(responseCode = "200", description = "Payment cancelled")
     @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
     @ApiResponse(responseCode = "403", description = "Insufficient role permissions")
     public ResponseEntity<?> cancelPayment(
             @Parameter(description = "Mouvement ID", example = "AMI-202607000001")
-            @PathVariable String mouvementId) {
-        log.info("[FATOURATI_PAY] Cancel payment: mouvementId={}", mouvementId);
+            @PathVariable String mouvementId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String actor = jwt != null ? jwt.getSubject() : "ADMIN";
+        log.info("[FATOURATI_PAY] Cancel payment: mouvementId={}, actor={}", mouvementId, actor);
+
+        var tokenOpt = tokenRepository.findActiveByMouvementId(mouvementId);
+        tokenOpt.ifPresent(token -> historyRepository.save(
+                FatouratiTokenStatusHistory.builder()
+                        .tokenRef(token.getTokenRef())
+                        .previousStatus(token.getStatus())
+                        .newStatus(FatouratiTokenStatus.CANCELLED)
+                        .reason("ADMIN_CANCEL")
+                        .actor(actor)
+                        .build()
+        ));
 
         cancelService.cancel(mouvementId);
 
@@ -122,6 +144,43 @@ public class FatouratiPaymentController {
                 "mouvementId", mouvementId,
                 "status", "CANCELLED"
         ));
+    }
+
+    @GetMapping("/mouvement/{mouvementId}/paiement/fatourati/history")
+    @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
+    @Operation(
+            summary = "Get payment status history for a mouvement",
+            description = "Returns the full status transition history for the Fatourati token associated with this mouvement."
+    )
+    @ApiResponse(responseCode = "200", description = "History retrieved")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
+    @ApiResponse(responseCode = "403", description = "Insufficient role permissions")
+    public ResponseEntity<?> getPaymentHistory(
+            @Parameter(description = "Mouvement ID", example = "AMI-202607000001")
+            @PathVariable String mouvementId) {
+        log.info("[FATOURATI_PAY] History: mouvementId={}", mouvementId);
+
+        var tokenOpt = tokenRepository.findByMouvementId(mouvementId);
+        if (tokenOpt.isEmpty()) {
+            return ResponseEntity.ok(java.util.List.of());
+        }
+
+        var token = tokenOpt.get();
+        var history = historyRepository.findByTokenRef(token.getTokenRef()).stream()
+                .map(h -> FatouratiPaymentHistoryDto.builder()
+                        .id(h.getId())
+                        .tokenRef(h.getTokenRef())
+                        .previousStatus(h.getPreviousStatus() != null ? h.getPreviousStatus().name() : null)
+                        .newStatus(h.getNewStatus().name())
+                        .reason(h.getReason())
+                        .actor(h.getActor())
+                        .channel(h.getChannel())
+                        .operator(h.getOperator())
+                        .occurredAt(h.getOccurredAt())
+                        .build())
+                .toList();
+
+        return ResponseEntity.ok(history);
     }
 
     @ExceptionHandler(HttpClientErrorException.class)

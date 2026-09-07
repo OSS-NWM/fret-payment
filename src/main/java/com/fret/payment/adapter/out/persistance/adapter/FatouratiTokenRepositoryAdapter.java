@@ -1,12 +1,15 @@
 package com.fret.payment.adapter.out.persistance.adapter;
 
 import com.fret.payment.adapter.out.persistance.entity.FatouratiTokenEntity;
+import com.fret.payment.adapter.out.persistance.entity.FatouratiTokenStatusHistoryEntity;
 import com.fret.payment.adapter.out.persistance.repository.FatouratiTokenJpaRepository;
+import com.fret.payment.adapter.out.persistance.repository.FatouratiTokenStatusHistoryJpaRepository;
 import com.fret.payment.domain.model.payment.FatouratiToken;
 import com.fret.payment.domain.model.payment.FatouratiTokenStatus;
 import com.fret.payment.domain.port.out.payment.FatouratiTokenRepositoryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -15,6 +18,7 @@ import java.util.Optional;
 public class FatouratiTokenRepositoryAdapter implements FatouratiTokenRepositoryPort {
 
     private final FatouratiTokenJpaRepository jpaRepository;
+    private final FatouratiTokenStatusHistoryJpaRepository historyJpaRepository;
 
     @Override
     public FatouratiToken save(FatouratiToken token) {
@@ -34,10 +38,66 @@ public class FatouratiTokenRepositoryAdapter implements FatouratiTokenRepository
     }
 
     @Override
+    @Transactional
     public void updateStatus(String tokenRef, FatouratiTokenStatus status) {
         jpaRepository.findByTokenRef(tokenRef).ifPresent(entity -> {
+            FatouratiTokenStatus previousStatus = entity.getStatus();
             entity.setStatus(status);
             jpaRepository.save(entity);
+
+            historyJpaRepository.save(FatouratiTokenStatusHistoryEntity.builder()
+                    .tokenRef(tokenRef)
+                    .previousStatus(previousStatus)
+                    .newStatus(status)
+                    .reason("STATUS_UPDATE")
+                    .actor("SYSTEM")
+                    .build());
+        });
+    }
+
+    @Override
+    @Transactional
+    public void recordTransition(String tokenRef, FatouratiTokenStatus previousStatus,
+                                 FatouratiTokenStatus newStatus, String reason, String actor,
+                                 String channel, String operator) {
+        jpaRepository.findByTokenRef(tokenRef).ifPresent(entity -> {
+            entity.setStatus(newStatus);
+            if (channel != null) entity.setPaymentChannel(channel);
+            if (operator != null) entity.setPaymentOperator(operator);
+            jpaRepository.save(entity);
+
+            historyJpaRepository.save(FatouratiTokenStatusHistoryEntity.builder()
+                    .tokenRef(tokenRef)
+                    .previousStatus(previousStatus)
+                    .newStatus(newStatus)
+                    .reason(reason)
+                    .actor(actor)
+                    .channel(channel)
+                    .operator(operator)
+                    .build());
+        });
+    }
+
+    @Override
+    @Transactional
+    public void updateConfirmation(String tokenRef, FatouratiTokenStatus newStatus,
+                                   String channel, String operator, String reason, String actor) {
+        jpaRepository.findByTokenRef(tokenRef).ifPresent(entity -> {
+            FatouratiTokenStatus previousStatus = entity.getStatus();
+            entity.setStatus(newStatus);
+            if (channel != null) entity.setPaymentChannel(channel);
+            if (operator != null) entity.setPaymentOperator(operator);
+            jpaRepository.save(entity);
+
+            historyJpaRepository.save(FatouratiTokenStatusHistoryEntity.builder()
+                    .tokenRef(tokenRef)
+                    .previousStatus(previousStatus)
+                    .newStatus(newStatus)
+                    .reason(reason)
+                    .actor(actor)
+                    .channel(channel)
+                    .operator(operator)
+                    .build());
         });
     }
 
@@ -58,6 +118,8 @@ public class FatouratiTokenRepositoryAdapter implements FatouratiTokenRepository
                 .status(token.getStatus())
                 .qrCode(token.getQrCode())
                 .channels(token.getChannels())
+                .paymentChannel(token.getPaymentChannel())
+                .paymentOperator(token.getPaymentOperator())
                 .expiresAt(token.getExpiresAt())
                 .rawResponse(token.getCreatedAt() != null ? token.getCreatedAt().toString() : null)
                 .build();
@@ -74,6 +136,8 @@ public class FatouratiTokenRepositoryAdapter implements FatouratiTokenRepository
                 .status(entity.getStatus())
                 .qrCode(entity.getQrCode())
                 .channels(entity.getChannels())
+                .paymentChannel(entity.getPaymentChannel())
+                .paymentOperator(entity.getPaymentOperator())
                 .expiresAt(entity.getExpiresAt())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())

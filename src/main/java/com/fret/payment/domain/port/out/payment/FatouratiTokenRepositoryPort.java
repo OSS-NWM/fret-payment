@@ -15,5 +15,12 @@ public interface FatouratiTokenRepositoryPort {
 
     void updateStatus(String tokenRef, FatouratiTokenStatus status);
 
+    void recordTransition(String tokenRef, FatouratiTokenStatus previousStatus,
+                          FatouratiTokenStatus newStatus, String reason, String actor,
+                          String channel, String operator);
+
+    void updateConfirmation(String tokenRef, FatouratiTokenStatus newStatus,
+                             String channel, String operator, String reason, String actor);
+
     Optional<FatouratiToken> findActiveByMouvementId(String mouvementId);
 }

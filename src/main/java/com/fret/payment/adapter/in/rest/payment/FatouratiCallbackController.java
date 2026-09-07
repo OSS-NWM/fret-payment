@@ -3,6 +3,8 @@ package com.fret.payment.adapter.in.rest.payment;
 import com.fret.payment.adapter.in.rest.payment.dto.FatouratiCallbackDto;
 import com.fret.payment.adapter.out.cmi.CmiProperties;
 import com.fret.payment.adapter.out.cmi.CmiSignatureUtil;
+import com.fret.payment.adapter.out.persistance.adapter.FatouratiTokenRepositoryAdapter;
+import com.fret.payment.adapter.out.persistance.adapter.FatouratiTokenStatusHistoryRepositoryAdapter;
 import com.fret.payment.application.service.payment.CancelFatouratiPaymentService;
 import com.fret.payment.application.service.payment.ConfirmFatouratiPaymentService;
 import com.fret.payment.domain.model.payment.FatouratiPaymentCallback;
@@ -38,6 +40,8 @@ public class FatouratiCallbackController {
     private final CmiSignatureUtil signatureUtil;
     private final CmiProperties cmiProperties;
     private final ObjectMapper objectMapper;
+    private final FatouratiTokenRepositoryAdapter tokenRepository;
+    private final FatouratiTokenStatusHistoryRepositoryAdapter historyRepository;
 
     @PostMapping("/callback")
     @Operation(
@@ -198,6 +202,16 @@ public class FatouratiCallbackController {
         }
 
         if (dto.getOrderId() != null && !dto.getOrderId().isBlank()) {
+            var tokenOpt = tokenRepository.findByMouvementId(dto.getOrderId());
+            tokenOpt.ifPresent(token -> historyRepository.save(
+                    com.fret.payment.domain.model.payment.FatouratiTokenStatusHistory.builder()
+                            .tokenRef(token.getTokenRef())
+                            .previousStatus(token.getStatus())
+                            .newStatus(FatouratiTokenStatus.CANCELLED)
+                            .reason("WEBHOOK_CANCEL")
+                            .actor("CMI_WEBHOOK")
+                            .build()
+            ));
             cancelService.cancel(dto.getOrderId());
         }
 

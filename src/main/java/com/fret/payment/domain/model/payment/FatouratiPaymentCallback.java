@@ -15,6 +15,7 @@ public class FatouratiPaymentCallback {
 
     private String merchantCode;
     private String store;
+    private String aggregatorCode;
     private String tokenRef;
     private String orderId;
     private BigDecimal totalAmount;
@@ -26,8 +27,8 @@ public class FatouratiPaymentCallback {
     private String paymentMode;
     private String channel;
     private String operator;
+    private String terminalId;
     private Object extraData;
-    private String aggregatorCode;
     private Integer decisionCode;
     private String signature;
 

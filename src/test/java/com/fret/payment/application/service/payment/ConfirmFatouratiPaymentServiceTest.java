@@ -4,6 +4,7 @@ import com.fret.payment.adapter.out.cmi.CmiProperties;
 import com.fret.payment.adapter.out.cmi.CmiSignatureUtil;
 import com.fret.payment.adapter.out.persistance.adapter.FatouratiCallbackLogRepositoryAdapter;
 import com.fret.payment.adapter.out.persistance.adapter.FatouratiTokenRepositoryAdapter;
+import com.fret.payment.adapter.out.persistance.adapter.FatouratiTransactionRepositoryAdapter;
 import com.fret.payment.domain.model.payment.FatouratiPaymentCallback;
 import com.fret.payment.domain.model.payment.FatouratiToken;
 import com.fret.payment.domain.model.payment.FatouratiTokenStatus;
@@ -33,6 +34,8 @@ class ConfirmFatouratiPaymentServiceTest {
     @Mock
     private FatouratiCallbackLogRepositoryAdapter callbackLogRepository;
     @Mock
+    private FatouratiTransactionRepositoryAdapter transactionRepository;
+    @Mock
     private CmiSignatureUtil signatureUtil;
     @Mock
     private CmiProperties cmiProperties;
@@ -45,7 +48,7 @@ class ConfirmFatouratiPaymentServiceTest {
     void setUp() {
         objectMapper = new ObjectMapper();
         service = new ConfirmFatouratiPaymentService(
-                tokenRepository, callbackLogRepository, signatureUtil, cmiProperties, objectMapper, fretManagementNotifier);
+                tokenRepository, callbackLogRepository, transactionRepository, signatureUtil, cmiProperties, objectMapper, fretManagementNotifier);
     }
 
     @Test

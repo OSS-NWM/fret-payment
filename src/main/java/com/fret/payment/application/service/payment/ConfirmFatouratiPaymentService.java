@@ -4,8 +4,10 @@ import com.fret.payment.adapter.out.cmi.CmiProperties;
 import com.fret.payment.adapter.out.cmi.CmiSignatureUtil;
 import com.fret.payment.adapter.out.persistance.adapter.FatouratiCallbackLogRepositoryAdapter;
 import com.fret.payment.adapter.out.persistance.adapter.FatouratiTokenRepositoryAdapter;
+import com.fret.payment.adapter.out.persistance.adapter.FatouratiTransactionRepositoryAdapter;
 import com.fret.payment.domain.model.payment.FatouratiPaymentCallback;
 import com.fret.payment.domain.model.payment.FatouratiTokenStatus;
+import com.fret.payment.domain.model.payment.FatouratiTransaction;
 import com.fret.payment.domain.port.in.payment.ConfirmFatouratiPaymentUseCase;
 import com.fret.payment.domain.port.out.FretManagementNotifierPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -24,6 +26,7 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
 
     private final FatouratiTokenRepositoryAdapter tokenRepository;
     private final FatouratiCallbackLogRepositoryAdapter callbackLogRepository;
+    private final FatouratiTransactionRepositoryAdapter transactionRepository;
     private final CmiSignatureUtil signatureUtil;
     private final CmiProperties cmiProperties;
     private final ObjectMapper objectMapper;
@@ -32,8 +35,9 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
     @Override
     @Transactional
     public String confirmPayment(FatouratiPaymentCallback callback) {
-        log.info("[FATOURATI_CONFIRM] Processing callback: tokenRef={}, decisionCode={}, numTrx={}",
-                callback.getTokenRef(), callback.getDecisionCode(), callback.getFatouratiTransactionNumber());
+        log.info("[FATOURATI_CONFIRM] Processing callback: tokenRef={}, decisionCode={}, numTrx={}, channel={}, operator={}",
+                callback.getTokenRef(), callback.getDecisionCode(), callback.getFatouratiTransactionNumber(),
+                callback.getChannel(), callback.getOperator());
 
         String rawBody = toJson(callback);
 
@@ -73,6 +77,7 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
         }
 
         var token = tokenOpt.get();
+        String receiptNumber = generateReceiptNumber();
 
         if (callback.getDecisionCode() == null || callback.getDecisionCode() == 0) {
             tokenRepository.updateConfirmation(
@@ -83,8 +88,9 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
                     "PAYMENT_CONFIRMED",
                     "CMI_WEBHOOK"
             );
-            log.info("[FATOURATI_CONFIRM] Payment approved: tokenRef={}, channel={}, operator={}",
-                    callback.getTokenRef(), callback.getChannel(), callback.getOperator());
+            saveTransaction(callback, receiptNumber, "PAID");
+            log.info("[FATOURATI_CONFIRM] Payment approved: tokenRef={}, channel={}, operator={}, receipt={}",
+                    callback.getTokenRef(), callback.getChannel(), callback.getOperator(), receiptNumber);
 
             fretManagementNotifier.notifyPaymentConfirmed(
                     callback.getTokenRef(),
@@ -103,6 +109,7 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
                     callback.getChannel(),
                     callback.getOperator()
             );
+            saveTransaction(callback, receiptNumber, "REJECTED");
             log.info("[FATOURATI_CONFIRM] Payment refused: tokenRef={}", callback.getTokenRef());
         } else {
             tokenRepository.recordTransition(
@@ -114,11 +121,48 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
                     callback.getChannel(),
                     callback.getOperator()
             );
+            saveTransaction(callback, receiptNumber, "UNKNOWN");
             log.warn("[FATOURATI_CONFIRM] Unknown decisionCode={} for tokenRef={}",
                     callback.getDecisionCode(), callback.getTokenRef());
         }
 
-        return "0";
+        return receiptNumber;
+    }
+
+    private void saveTransaction(FatouratiPaymentCallback callback, String receiptNumber, String status) {
+        try {
+            List<FatouratiTransaction.SelectedItem> items = null;
+            if (callback.getSelectedItems() != null) {
+                items = callback.getSelectedItems().stream()
+                        .map(si -> FatouratiTransaction.SelectedItem.builder()
+                                .id(si.getId())
+                                .amount(si.getAmount())
+                                .build())
+                        .toList();
+            }
+
+            FatouratiTransaction tx = FatouratiTransaction.builder()
+                    .tokenRef(callback.getTokenRef())
+                    .aggregatorCode(callback.getAggregatorCode())
+                    .channel(callback.getChannel())
+                    .operator(callback.getOperator())
+                    .terminalId(null)
+                    .fatouratiTransactionNumber(callback.getFatouratiTransactionNumber())
+                    .paymentSystemTransactionNumber(callback.getPaymentSystemTransactionNumber())
+                    .paymentMode(callback.getPaymentMode())
+                    .amount(callback.getTotalAmount())
+                    .currency(callback.getCurrency())
+                    .transactionDate(callback.getTransactionDate())
+                    .receiptNumber(receiptNumber)
+                    .status(status)
+                    .selectedItems(items)
+                    .rawPayload(toJson(callback))
+                    .build();
+            transactionRepository.save(tx);
+            log.info("[FATOURATI_CONFIRM] Saved transaction record for tokenRef={}, receipt={}", callback.getTokenRef(), receiptNumber);
+        } catch (Exception e) {
+            log.warn("[FATOURATI_CONFIRM] Failed to save transaction record for tokenRef={}: {}", callback.getTokenRef(), e.getMessage());
+        }
     }
 
     private boolean verifyCallbackSignature(FatouratiPaymentCallback callback) {

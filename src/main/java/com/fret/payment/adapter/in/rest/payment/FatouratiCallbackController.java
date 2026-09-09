@@ -65,6 +65,7 @@ public class FatouratiCallbackController {
             callback = FatouratiPaymentCallback.builder()
                     .merchantCode(dto.getMerchantCode())
                     .store(dto.getStore())
+                    .aggregatorCode(dto.getAggregatorCode())
                     .tokenRef(dto.getTokenRef())
                     .orderId(dto.getOrderId())
                     .totalAmount(dto.getTotalAmount())
@@ -82,8 +83,8 @@ public class FatouratiCallbackController {
                     .paymentMode(dto.getPaymentMode())
                     .channel(dto.getChannel())
                     .operator(dto.getOperator())
+                    .terminalId(null)
                     .extraData(dto.getExtraData())
-                    .aggregatorCode(dto.getAggregatorCode())
                     .decisionCode(dto.getDecisionCode() != null ? dto.getDecisionCode() : 0)
                     .signature(signature)
                     .build();
@@ -99,9 +100,9 @@ public class FatouratiCallbackController {
 
         String result = confirmService.confirmPayment(callback);
 
-        if ("0".equals(result)) {
-            return ResponseEntity.ok(Map.of("receiptNumber", confirmService.generateReceiptNumber()));
-        } else if ("2".equals(result)) {
+        if (result != null && !result.isBlank() && !"3".equals(result)) {
+            return ResponseEntity.ok(Map.of("receiptNumber", result));
+        } else if ("2".equals(result) || "ALREADY_PROCESSED".equals(result)) {
             return ResponseEntity.ok(Map.of("receiptNumber", "ALREADY_PROCESSED"));
         } else {
             return ResponseEntity.badRequest().body(Map.of(

@@ -1,17 +1,20 @@
 package com.fret.payment.adapter.in.rest.payment;
 
 import com.fret.payment.adapter.in.rest.payment.dto.FatouratiPaymentHistoryDto;
+import com.fret.payment.adapter.in.rest.payment.dto.FatouratiPaymentTransactionDto;
 import com.fret.payment.adapter.in.rest.payment.dto.FatouratiStatusResponseDto;
 import com.fret.payment.adapter.in.rest.payment.dto.FatouratiTokenResponseDto;
 import com.fret.payment.adapter.out.cmi.CmiSignatureException;
 import com.fret.payment.adapter.out.persistance.adapter.FatouratiTokenStatusHistoryRepositoryAdapter;
 import com.fret.payment.adapter.out.persistance.adapter.FatouratiTokenRepositoryAdapter;
+import com.fret.payment.adapter.out.persistance.adapter.FatouratiTransactionRepositoryAdapter;
 import com.fret.payment.application.service.payment.CancelFatouratiPaymentService;
 import com.fret.payment.application.service.payment.InitiateFatouratiPaymentService;
 import com.fret.payment.application.service.payment.QueryFatouratiStatusService;
 import com.fret.payment.domain.model.payment.FatouratiToken;
 import com.fret.payment.domain.model.payment.FatouratiTokenStatus;
 import com.fret.payment.domain.model.payment.FatouratiTokenStatusHistory;
+import com.fret.payment.domain.model.payment.FatouratiTransaction;
 import com.fret.payment.domain.model.payment.FatouratiTransactionStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -44,6 +47,7 @@ public class FatouratiPaymentController {
     private final CancelFatouratiPaymentService cancelService;
     private final FatouratiTokenRepositoryAdapter tokenRepository;
     private final FatouratiTokenStatusHistoryRepositoryAdapter historyRepository;
+    private final FatouratiTransactionRepositoryAdapter transactionRepository;
 
     @PostMapping("/mouvement/{mouvementId}/paiement/fatourati")
     @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
@@ -181,6 +185,57 @@ public class FatouratiPaymentController {
                 .toList();
 
         return ResponseEntity.ok(history);
+    }
+
+    @GetMapping("/mouvement/{mouvementId}/paiement/fatourati/transactions")
+    @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
+    @Operation(
+            summary = "Get all CMI transaction records for a mouvement",
+            description = "Returns the full list of Fatourati transactions (CMI callbacks) recorded for this mouvement's token, "
+                    + "including channel, operator, aggregator code, terminal ID, and per-item breakdown."
+    )
+    @ApiResponse(responseCode = "200", description = "Transactions retrieved")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
+    @ApiResponse(responseCode = "403", description = "Insufficient role permissions")
+    public ResponseEntity<?> getPaymentTransactions(
+            @Parameter(description = "Mouvement ID", example = "AMI-202607000001")
+            @PathVariable String mouvementId) {
+        log.info("[FATOURATI_PAY] Transactions: mouvementId={}", mouvementId);
+
+        var tokenOpt = tokenRepository.findByMouvementId(mouvementId);
+        if (tokenOpt.isEmpty()) {
+            return ResponseEntity.ok(java.util.List.of());
+        }
+
+        var token = tokenOpt.get();
+        var transactions = transactionRepository.findByTokenRef(token.getTokenRef()).stream()
+                .map(t -> FatouratiPaymentTransactionDto.builder()
+                        .id(t.getId())
+                        .tokenRef(t.getTokenRef())
+                        .aggregatorCode(t.getAggregatorCode())
+                        .channel(t.getChannel())
+                        .operator(t.getOperator())
+                        .terminalId(t.getTerminalId())
+                        .fatouratiTransactionNumber(t.getFatouratiTransactionNumber())
+                        .paymentSystemTransactionNumber(t.getPaymentSystemTransactionNumber())
+                        .paymentMode(t.getPaymentMode())
+                        .amount(t.getAmount())
+                        .currency(t.getCurrency())
+                        .transactionDate(t.getTransactionDate())
+                        .receiptNumber(t.getReceiptNumber())
+                        .status(t.getStatus())
+                        .selectedItems(t.getSelectedItems() != null
+                                ? t.getSelectedItems().stream().map(si ->
+                                    FatouratiPaymentTransactionDto.SelectedItem.builder()
+                                            .id(si.getId())
+                                            .amount(si.getAmount())
+                                            .build()).toList()
+                                : null)
+                        .createdAt(t.getCreatedAt())
+                        .build())
+                .toList();
+
+        return ResponseEntity.ok(transactions);
     }
 
     @ExceptionHandler(HttpClientErrorException.class)

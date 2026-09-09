@@ -21,6 +21,9 @@ public class FatouratiCallbackDto {
     @Schema(example = "100030")
     @JsonProperty("store") private String store;
 
+    @Schema(example = "AGG001")
+    @JsonProperty("aggregatorCode") private String aggregatorCode;
+
     @Schema(example = "1000300000071")
     @JsonProperty("tokenRef") private String tokenRef;
 
@@ -51,10 +54,10 @@ public class FatouratiCallbackDto {
 
     @JsonProperty("operator") private String operator;
 
+    @JsonProperty("terminalId") private String terminalId;
+
     @Schema(description = "CMI extraData — can be a string, object, or array. Stored as raw JSON.")
     @JsonProperty("extraData") private Object extraData;
-
-    @JsonProperty("aggregatorCode") private String aggregatorCode;
 
     @Schema(description = "Decision code: 0 = confirmed, 2 = already processed", example = "0")
     @JsonProperty("decisionCode") private Integer decisionCode;

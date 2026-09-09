@@ -33,7 +33,8 @@ public class FatouratiCallbackDto {
     @Schema(example = "504")
     @JsonProperty("currency") private String currency;
 
-    @JsonProperty("selectedItems") private List<String> selectedItems;
+    @Schema(description = "Items selected for payment — each is {id, amount}")
+    @JsonProperty("selectedItems") private List<SelectedItem> selectedItems;
 
     @Schema(example = "2026-09-06T15:30:00Z")
     @JsonProperty("transactionDate") private String transactionDate;
@@ -50,8 +51,21 @@ public class FatouratiCallbackDto {
 
     @JsonProperty("operator") private String operator;
 
-    @JsonProperty("extraData") private String extraData;
+    @Schema(description = "CMI extraData — can be a string, object, or array. Stored as raw JSON.")
+    @JsonProperty("extraData") private Object extraData;
+
+    @JsonProperty("aggregatorCode") private String aggregatorCode;
 
     @Schema(description = "Decision code: 0 = confirmed, 2 = already processed", example = "0")
     @JsonProperty("decisionCode") private Integer decisionCode;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class SelectedItem {
+        @JsonProperty("id") private String id;
+        @JsonProperty("amount") private BigDecimal amount;
+    }
 }

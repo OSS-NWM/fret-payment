@@ -19,14 +19,25 @@ public class FatouratiPaymentCallback {
     private String orderId;
     private BigDecimal totalAmount;
     private String currency;
-    private List<String> selectedItems;
+    private List<SelectedItem> selectedItems;
     private LocalDateTime transactionDate;
     private String fatouratiTransactionNumber;
     private String paymentSystemTransactionNumber;
     private String paymentMode;
     private String channel;
     private String operator;
-    private String extraData;
+    private Object extraData;
+    private String aggregatorCode;
     private Integer decisionCode;
     private String signature;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class SelectedItem {
+        private String id;
+        private BigDecimal amount;
+    }
 }

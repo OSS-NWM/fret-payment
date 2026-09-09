@@ -69,6 +69,13 @@ public class FatouratiCallbackController {
                     .orderId(dto.getOrderId())
                     .totalAmount(dto.getTotalAmount())
                     .currency(dto.getCurrency())
+                    .selectedItems(dto.getSelectedItems() != null
+                            ? dto.getSelectedItems().stream().map(si ->
+                                FatouratiPaymentCallback.SelectedItem.builder()
+                                        .id(si.getId())
+                                        .amount(si.getAmount())
+                                        .build()).toList()
+                            : null)
                     .transactionDate(parseDateTime(dto.getTransactionDate()))
                     .fatouratiTransactionNumber(dto.getFatouratiTransactionNumber())
                     .paymentSystemTransactionNumber(dto.getPaymentSystemTransactionNumber())
@@ -76,6 +83,7 @@ public class FatouratiCallbackController {
                     .channel(dto.getChannel())
                     .operator(dto.getOperator())
                     .extraData(dto.getExtraData())
+                    .aggregatorCode(dto.getAggregatorCode())
                     .decisionCode(dto.getDecisionCode() != null ? dto.getDecisionCode() : 0)
                     .signature(signature)
                     .build();

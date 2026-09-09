@@ -27,7 +27,8 @@ public class FatouratiStatusResponseDto {
     @Schema(description = "Payment amount in MAD", example = "5000.00")
     @JsonProperty("totalAmount") private BigDecimal totalAmount;
 
-    @Schema(description = "Available payment channels")
+    @Schema(description = "Available payment channels for this token (CASH at bank agencies, electronic wallets, e-banking, etc.)",
+            example = "[\"CFGMOBILE.t\", \"CDMBanqueDirect\", \"BMCI Connexis.t\", \"WafacashJibi\", \"CIHMOBILE.t\"]")
     @JsonProperty("channels") private List<String> channels;
 
     @Schema(description = "Token expiry datetime", example = "2026-09-07T17:25:55")

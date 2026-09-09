@@ -36,7 +36,8 @@ public class FatouratiCallbackDto {
     @Schema(example = "504")
     @JsonProperty("currency") private String currency;
 
-    @Schema(description = "Items selected for payment — each is {id, amount}")
+    @Schema(description = "Items selected for payment — each is {id, amount}",
+            example = "[{\"id\": \"AMI-202607000050\", \"amount\": 100.00}]")
     @JsonProperty("selectedItems") private List<SelectedItem> selectedItems;
 
     @Schema(example = "2026-09-06T15:30:00Z")
@@ -45,15 +46,19 @@ public class FatouratiCallbackDto {
     @Schema(example = "FATO-2026-0001")
     @JsonProperty("fatouratiTransactionNumber") private String fatouratiTransactionNumber;
 
+    @Schema(description = "Transaction identifier at the payment operator (bank/wallet) level", example = "791199")
     @JsonProperty("paymentSystemTransactionNumber") private String paymentSystemTransactionNumber;
 
     @Schema(example = "MULTI_CANAL")
     @JsonProperty("paymentMode") private String paymentMode;
 
+    @Schema(description = "Payment channel code (2-char identifier — see CMI doc for codes)", example = "MOBILE_MONEY")
     @JsonProperty("channel") private String channel;
 
+    @Schema(description = "Payment operator name (bank/wallet — see CMI doc for codes)", example = "ORANGE_MAROC")
     @JsonProperty("operator") private String operator;
 
+    @Schema(description = "Identifier of the physical or logical payment terminal", example = "1231542")
     @JsonProperty("terminalId") private String terminalId;
 
     @Schema(description = "CMI extraData — can be a string, object, or array. Stored as raw JSON.")

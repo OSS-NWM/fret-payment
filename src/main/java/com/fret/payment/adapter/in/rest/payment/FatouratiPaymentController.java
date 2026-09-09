@@ -18,6 +18,7 @@ import com.fret.payment.domain.model.payment.FatouratiTransaction;
 import com.fret.payment.domain.model.payment.FatouratiTransactionStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -42,6 +43,9 @@ import java.util.Map;
 @SecurityRequirement(name = "bearerAuth")
 public class FatouratiPaymentController {
 
+    private static final String FATOURATI_ROLES =
+            "hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')";
+
     private final InitiateFatouratiPaymentService initiateService;
     private final QueryFatouratiStatusService queryService;
     private final CancelFatouratiPaymentService cancelService;
@@ -50,7 +54,7 @@ public class FatouratiPaymentController {
     private final FatouratiTransactionRepositoryAdapter transactionRepository;
 
     @PostMapping("/mouvement/{mouvementId}/paiement/fatourati")
-    @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
+    @PreAuthorize(FATOURATI_ROLES)
     @Operation(
             summary = "Initiate a Fatourati payment",
             description = "Creates a CMI Fatourati payment token for the given mouvement. "
@@ -58,9 +62,12 @@ public class FatouratiPaymentController {
     )
     @ApiResponse(responseCode = "200", description = "Token created successfully",
             content = @Content(schema = @Schema(implementation = FatouratiTokenResponseDto.class)))
-    @ApiResponse(responseCode = "400", description = "CMI rejected the request (signature or parameter error)")
+    @ApiResponse(responseCode = "400", description = "CMI rejected the request (signature or parameter error)",
+            content = @Content(schema = @Schema(example = "{\"status\":\"400 BAD_REQUEST\",\"cmiError\":\"INVALID_REQUEST_SIGNATURE\",\"signatureData\":\"...\",\"signatureValue\":\"...\",\"path\":\"/api/payment/fatourati\"}")))
     @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
     @ApiResponse(responseCode = "403", description = "Insufficient role permissions")
+    @ApiResponse(responseCode = "500", description = "Internal server error",
+            content = @Content(schema = @Schema(example = "{\"error\":\"CMI access token refresh failed\",\"type\":\"RuntimeException\",\"path\":\"/api/payment/fatourati\"}")))
     public ResponseEntity<?> initiatePayment(
             @Parameter(description = "Mouvement ID (e.g. AMI-202607000001)", example = "AMI-202607000001")
             @PathVariable String mouvementId) {
@@ -84,15 +91,17 @@ public class FatouratiPaymentController {
     }
 
     @GetMapping("/mouvement/{mouvementId}/paiement/fatourati/status")
-    @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
+    @PreAuthorize(FATOURATI_ROLES)
     @Operation(
             summary = "Get payment status for a mouvement",
             description = "Returns the current Fatourati token status and payment details."
     )
     @ApiResponse(responseCode = "200", description = "Status retrieved",
             content = @Content(schema = @Schema(implementation = FatouratiStatusResponseDto.class)))
+    @ApiResponse(responseCode = "400", description = "Invalid mouvement ID format")
     @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
     @ApiResponse(responseCode = "403", description = "Insufficient role permissions")
+    @ApiResponse(responseCode = "500", description = "Internal server error")
     public ResponseEntity<?> getPaymentStatus(
             @Parameter(description = "Mouvement ID", example = "AMI-202607000001")
             @PathVariable String mouvementId) {
@@ -115,18 +124,22 @@ public class FatouratiPaymentController {
     }
 
     @DeleteMapping("/mouvement/{mouvementId}/paiement/fatourati")
-    @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
+    @PreAuthorize(FATOURATI_ROLES)
     @Operation(
             summary = "Cancel a pending Fatourati payment",
             description = "Cancels the pending Fatourati token for the given mouvement. "
-                    + "Admin-only action — writes a status history entry with the cancelling user's identity."
+                    + "Admin-only action — writes a status history entry with the cancelling user's identity (JWT subject)."
     )
-    @ApiResponse(responseCode = "200", description = "Payment cancelled")
+    @ApiResponse(responseCode = "200", description = "Payment cancelled",
+            content = @Content(schema = @Schema(example = "{\"mouvementId\":\"AMI-202607000001\",\"status\":\"CANCELLED\"}")))
+    @ApiResponse(responseCode = "400", description = "Mouvement not found or already cancelled")
     @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
     @ApiResponse(responseCode = "403", description = "Insufficient role permissions")
+    @ApiResponse(responseCode = "500", description = "Internal server error")
     public ResponseEntity<?> cancelPayment(
             @Parameter(description = "Mouvement ID", example = "AMI-202607000001")
             @PathVariable String mouvementId,
+            @Parameter(description = "Authenticated JWT principal (auto-injected by Spring Security)")
             @AuthenticationPrincipal Jwt jwt) {
         String actor = jwt != null ? jwt.getSubject() : "ADMIN";
         log.info("[FATOURATI_PAY] Cancel payment: mouvementId={}, actor={}", mouvementId, actor);
@@ -151,14 +164,18 @@ public class FatouratiPaymentController {
     }
 
     @GetMapping("/mouvement/{mouvementId}/paiement/fatourati/history")
-    @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
+    @PreAuthorize(FATOURATI_ROLES)
     @Operation(
             summary = "Get payment status history for a mouvement",
-            description = "Returns the full status transition history for the Fatourati token associated with this mouvement."
+            description = "Returns the full status transition history for the Fatourati token associated with this mouvement. " +
+                    "Each entry represents one transition (e.g. CREATED → CONSUMED)."
     )
-    @ApiResponse(responseCode = "200", description = "History retrieved")
+    @ApiResponse(responseCode = "200", description = "History retrieved — list of FatouratiPaymentHistoryEntry ordered by occurredAt ASC",
+            content = @Content(array = @ArraySchema(schema = @Schema(implementation = FatouratiPaymentHistoryDto.class))))
+    @ApiResponse(responseCode = "400", description = "Invalid mouvement ID format")
     @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
     @ApiResponse(responseCode = "403", description = "Insufficient role permissions")
+    @ApiResponse(responseCode = "500", description = "Internal server error")
     public ResponseEntity<?> getPaymentHistory(
             @Parameter(description = "Mouvement ID", example = "AMI-202607000001")
             @PathVariable String mouvementId) {
@@ -188,15 +205,19 @@ public class FatouratiPaymentController {
     }
 
     @GetMapping("/mouvement/{mouvementId}/paiement/fatourati/transactions")
-    @PreAuthorize("hasAnyRole('OPERATEUR_COMMUNITY', 'AGENT_FACTURATION_NWM', 'RESPONSABLE_FACTURATION_NWM')")
+    @PreAuthorize(FATOURATI_ROLES)
     @Operation(
             summary = "Get all CMI transaction records for a mouvement",
-            description = "Returns the full list of Fatourati transactions (CMI callbacks) recorded for this mouvement's token, "
-                    + "including channel, operator, aggregator code, terminal ID, and per-item breakdown."
+            description = "Returns the full list of Fatourati transactions (CMI callbacks) recorded for this mouvement's token, " +
+                    "including channel, operator, aggregator code, terminal ID, and per-item breakdown. " +
+                    "Multiple transactions per token are possible (retries, partial payments)."
     )
-    @ApiResponse(responseCode = "200", description = "Transactions retrieved")
+    @ApiResponse(responseCode = "200", description = "Transactions retrieved — list of FatouratiPaymentTransaction ordered by createdAt ASC",
+            content = @Content(array = @ArraySchema(schema = @Schema(implementation = FatouratiPaymentTransactionDto.class))))
+    @ApiResponse(responseCode = "400", description = "Invalid mouvement ID format")
     @ApiResponse(responseCode = "401", description = "Missing or invalid JWT")
     @ApiResponse(responseCode = "403", description = "Insufficient role permissions")
+    @ApiResponse(responseCode = "500", description = "Internal server error")
     public ResponseEntity<?> getPaymentTransactions(
             @Parameter(description = "Mouvement ID", example = "AMI-202607000001")
             @PathVariable String mouvementId) {

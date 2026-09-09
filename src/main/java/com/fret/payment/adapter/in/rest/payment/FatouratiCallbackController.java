@@ -1,6 +1,7 @@
 package com.fret.payment.adapter.in.rest.payment;
 
 import com.fret.payment.adapter.in.rest.payment.dto.FatouratiCallbackDto;
+import com.fret.payment.adapter.in.rest.payment.dto.FatouratiCancelRequestDto;
 import com.fret.payment.adapter.out.cmi.CmiProperties;
 import com.fret.payment.adapter.out.cmi.CmiSignatureUtil;
 import com.fret.payment.adapter.out.persistance.adapter.FatouratiTokenRepositoryAdapter;
@@ -21,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -46,14 +46,19 @@ public class FatouratiCallbackController {
     @PostMapping("/callback")
     @Operation(
             summary = "CMI payment confirmation webhook",
-            description = "Called by CMI when a payment is confirmed. Verifies the payment decision and notifies fret-management. "
-                    + "Signature verification is performed internally — x-signature header is forwarded by CMI."
+            description = "Called by CMI when a payment is confirmed. Verifies the payment decision and notifies fret-management. " +
+                    "Signature verification is performed internally — x-signature header is forwarded by CMI."
     )
-    @ApiResponse(responseCode = "200", description = "Payment confirmed or already processed",
-            content = @Content(schema = @Schema(example = "{\"receiptNumber\": \"1000300000071\"}")))
-    @ApiResponse(responseCode = "400", description = "Invalid body or signature verification failed")
+    @ApiResponse(responseCode = "200", description = "Payment confirmed or already processed — receiptNumber returned",
+            content = @Content(schema = @Schema(example = "{\"receiptNumber\": \"REC1725903952103ABCD\"}")))
+    @ApiResponse(responseCode = "400", description = "Invalid body or signature verification failed",
+            content = @Content(schema = @Schema(example = "{\"code\": \"SIGNATURE_INVALID\", \"message\": \"Signature verification failed\", \"reference\": \"uuid\", \"timestamp\": \"2026-09-09T...\"}")))
+    @ApiResponse(responseCode = "500", description = "Internal server error during callback processing",
+            content = @Content(schema = @Schema(example = "{\"code\": \"INTERNAL_ERROR\", \"message\": \"...\", \"reference\": \"uuid\", \"timestamp\": \"2026-09-09T...\"}")))
     public ResponseEntity<?> callback(
+            @Parameter(description = "Raw JSON callback body sent by CMI (see FatouratiCallbackDto schema)", required = true, example = "{\"merchantCode\":\"100024\",\"store\":\"100030\",\"tokenRef\":\"1000300000194\",\"orderId\":\"AMI-202607000050\",\"totalAmount\":100.00,\"currency\":\"504\",\"selectedItems\":[{\"id\":\"AMI-202607000050\",\"amount\":100}],\"transactionDate\":\"2026-09-09T20:05:53\",\"fatouratiTransactionNumber\":\"100003791199\",\"paymentSystemTransactionNumber\":\"791199\",\"paymentMode\":\"MULTI_CANAL\",\"channel\":\"MOBILE_MONEY\",\"operator\":\"ORANGE_MAROC\",\"decisionCode\":0}")
             @RequestBody String rawBody,
+            @Parameter(description = "HMAC-SHA256 signature sent by CMI in the x-signature header. Must be computed over: totalAmount|currency|merchantCode|store|operator|channel|tokenRef|orderId|paymentMode|fatouratiTransactionNumber|storeApiKey", required = true, example = "a86668b9...")
             @RequestHeader(value = "x-signature", required = false) String signature
     ) {
         FatouratiPaymentCallback callback;
@@ -120,9 +125,14 @@ public class FatouratiCallbackController {
             description = "Called by CMI to check the payment status of a token. Returns one of: PAID, CANCELLED, EXPIRED, NOT_FOUND, PENDING."
     )
     @ApiResponse(responseCode = "200", description = "Status returned",
-            content = @Content(schema = @Schema(example = "{\"status\": \"PAID\"}")))
+            content = @Content(schema = @Schema(example = "{\"status\": \"PAID\"}",
+                    allowableValues = {"PAID", "CANCELLED", "EXPIRED", "NOT_FOUND", "PENDING"})))
+    @ApiResponse(responseCode = "500", description = "Internal server error",
+            content = @Content(schema = @Schema(example = "{\"code\": \"INTERNAL_ERROR\", ...}")))
     public ResponseEntity<?> checkStatus(
+            @Parameter(description = "Fatourati token reference to query", required = true, example = "1000300000194")
             @RequestParam(value = "token_ref") String tokenRef,
+            @Parameter(description = "Optional order/créance identifier (alternative lookup)", example = "AMI-202607000001")
             @RequestParam(value = "order_id", required = false) String orderId
     ) {
         log.info("[FATOURATI_CHECK_STATUS] Status check: tokenRef={}, orderId={}", tokenRef, orderId);
@@ -150,18 +160,24 @@ public class FatouratiCallbackController {
     @PostMapping("/cancel")
     @Operation(
             summary = "CMI cancel webhook",
-            description = "Called by CMI when a payment is cancelled. Verifies the cancel request signature before processing. "
-                    + "x-signature header is required."
+            description = "Called by CMI when a payment is cancelled (e.g. timeout for CASH payments). " +
+                    "Verifies the cancel request signature before processing. x-signature header is required."
     )
-    @ApiResponse(responseCode = "200", description = "Cancel processed successfully")
-    @ApiResponse(responseCode = "400", description = "Missing signature, invalid body, or signature verification failed")
+    @ApiResponse(responseCode = "200", description = "Cancel processed successfully — empty body")
+    @ApiResponse(responseCode = "400", description = "Missing signature, invalid body, or signature verification failed",
+            content = @Content(schema = @Schema(example = "{\"code\": \"MISSING_SIGNATURE\", \"message\": \"x-signature header is required\", \"reference\": \"uuid\", \"timestamp\": \"...\"}")))
+    @ApiResponse(responseCode = "500", description = "Internal server error",
+            content = @Content(schema = @Schema(example = "{\"code\": \"INTERNAL_ERROR\", ...}")))
     public ResponseEntity<?> cancel(
+            @Parameter(description = "Raw JSON cancel body sent by CMI (see FatouratiCancelRequestDto schema)", required = true,
+                    example = "{\"merchantCode\":\"100024\",\"store\":\"100030\",\"tokenRef\":\"1000300000194\",\"orderId\":\"AMI-202607000050\",\"totalAmount\":100.00,\"currency\":\"504\",\"transactionDate\":\"2026-09-09T20:05:53\",\"fatouratiTransactionNumber\":\"100003791199\"}")
             @RequestBody String rawBody,
+            @Parameter(description = "HMAC-SHA256 signature sent by CMI in the x-signature header. Must be computed over: totalAmount|currency|merchantCode|store|tokenRef|orderId|fatouratiTransactionNumber|storeApiKey", required = true, example = "...")
             @RequestHeader(value = "x-signature", required = false) String signature
     ) {
-        FatouratiCancelDto dto;
+        FatouratiCancelRequestDto dto;
         try {
-            dto = objectMapper.readValue(rawBody, FatouratiCancelDto.class);
+            dto = objectMapper.readValue(rawBody, FatouratiCancelRequestDto.class);
         } catch (Exception e) {
             log.error("[FATOURATI_CANCEL] Failed to parse cancel body: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of(
@@ -243,20 +259,5 @@ public class FatouratiCallbackController {
                 return LocalDateTime.now();
             }
         }
-    }
-
-    @lombok.Getter
-    @lombok.Setter
-    @lombok.NoArgsConstructor
-    @lombok.AllArgsConstructor
-    private static class FatouratiCancelDto {
-        private String merchantCode;
-        private String store;
-        private String tokenRef;
-        private String orderId;
-        private BigDecimal totalAmount;
-        private String currency;
-        private String transactionDate;
-        private String fatouratiTransactionNumber;
     }
 }

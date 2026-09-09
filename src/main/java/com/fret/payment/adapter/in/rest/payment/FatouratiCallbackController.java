@@ -198,7 +198,10 @@ public class FatouratiCallbackController {
                 cmiProperties.getStoreApiKey() != null ? cmiProperties.getStoreApiKey() : ""
         );
 
-        String expectedSig = signatureUtil.computeSignature(signatureData, cmiProperties.getStoreApiKey());
+        String expectedSig = signatureUtil.computeSignature(
+                signatureData,
+                cmiProperties.getSignatureAlgorithm(),
+                cmiProperties.getStoreApiKey());
         if (!signatureUtil.constantTimeEquals(expectedSig, signature)) {
             log.warn("[FATOURATI_CANCEL] Signature mismatch for tokenRef={}", dto.getTokenRef());
             return ResponseEntity.badRequest().body(Map.of(

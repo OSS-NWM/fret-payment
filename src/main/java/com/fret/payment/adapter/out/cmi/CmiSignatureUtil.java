@@ -23,6 +23,21 @@ public class CmiSignatureUtil {
         return computeHmacSha256(data, secretKey);
     }
 
+    /**
+     * Compute signature using the algorithm specified. Supports:
+     * - "SHA256" (case-insensitive) → plain SHA-256 (no key)
+     * - "HMAC-SHA256" / anything else → HMAC-SHA-256 with key
+     *
+     * Used for callback verification which must respect the configured algorithm
+     * the same way token generation does.
+     */
+    public String computeSignature(String data, String algorithm, String secretKey) {
+        if ("SHA256".equalsIgnoreCase(algorithm)) {
+            return computeSha256(data);
+        }
+        return computeHmacSha256(data, secretKey);
+    }
+
     public String computeHmacSha256(String data, String secretKey) {
         try {
             Mac mac = Mac.getInstance(HMAC_SHA256);

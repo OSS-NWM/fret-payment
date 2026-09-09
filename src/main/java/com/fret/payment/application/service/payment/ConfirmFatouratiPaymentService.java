@@ -144,7 +144,10 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
                     cmiProperties.getStoreApiKey() != null ? cmiProperties.getStoreApiKey() : ""
             );
 
-            String expected = signatureUtil.computeSignature(signatureData, cmiProperties.getStoreApiKey());
+            String expected = signatureUtil.computeSignature(
+                    signatureData,
+                    cmiProperties.getSignatureAlgorithm(),
+                    cmiProperties.getStoreApiKey());
             boolean valid = signatureUtil.constantTimeEquals(expected, callback.getSignature());
             if (!valid) {
                 log.warn("[FATOURATI_CONFIRM] Signature mismatch for tokenRef={}: expected={}, got={}",

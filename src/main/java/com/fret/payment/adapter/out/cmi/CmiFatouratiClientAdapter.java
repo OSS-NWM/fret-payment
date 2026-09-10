@@ -2,6 +2,7 @@ package com.fret.payment.adapter.out.cmi;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fret.payment.adapter.out.cmi.InvoiceLinePayload;
 import com.fret.payment.domain.model.payment.FatouratiToken;
 import com.fret.payment.domain.model.payment.FatouratiTokenStatus;
 import com.fret.payment.domain.model.payment.FatouratiTransactionStatus;
@@ -83,7 +84,8 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
     }
 
     @Override
-    public FatouratiToken generateToken(String orderId, BigDecimal amount, String currency,
+    public FatouratiToken generateToken(Long invoiceId, String orderId, List<InvoiceLinePayload> items,
+                                         BigDecimal totalAmount, String currency,
                                          String callbackUrl, String cancelUrl, String checkStatusUrl) {
         String url = props.getBaseUrl() + "/api/" + props.getApiVersion()
                 + "/merchants/" + props.getMerchantCode()
@@ -95,19 +97,27 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
         String expiryDate = LocalDateTime.now(ZoneId.of("Africa/Casablanca")).plusHours(24)
                 .format(cmiDateFormat);
 
-        GenerateTokenRequest.Item item = new GenerateTokenRequest.Item();
-        item.setId(orderId);
-        item.setAmount(signatureUtil.formatAmount(amount));
-        item.setDescription("Paiement AM Nador West Med");
-        item.setDue(true);
-        item.setSelected(true);
+        List<GenerateTokenRequest.Item> cmiItems = items.stream()
+                .map(line -> {
+                    GenerateTokenRequest.Item item = new GenerateTokenRequest.Item();
+                    item.setId("line-" + line.getIdLine());
+                    item.setAmount(signatureUtil.formatAmount(line.getAmount()));
+                    item.setDescription(line.getDescription() != null
+                            ? line.getDescription()
+                            : (line.getCodeArticle() != null ? line.getCodeArticle() : "Article " + line.getIdLine()));
+                    item.setDue(true);
+                    item.setSelected(true);
+                    return item;
+                })
+                .toList();
 
         GenerateTokenRequest.ClientInfo clientInfo = new GenerateTokenRequest.ClientInfo();
         clientInfo.setName(props.getClientName());
         clientInfo.setEmail(props.getClientEmail());
         clientInfo.setPhoneNumber(props.getClientPhone());
         clientInfo.setInfoToShow(List.of(
-                new GenerateTokenRequest.InfoToShow("Facture", orderId)
+                new GenerateTokenRequest.InfoToShow("Facture", orderId),
+                new GenerateTokenRequest.InfoToShow("N° AM", String.valueOf(invoiceId))
         ));
 
         GenerateTokenRequest.OrderLinks orderLinks = new GenerateTokenRequest.OrderLinks();
@@ -116,18 +126,18 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
         orderLinks.setCancelURL(cancelUrl);
 
         GenerateTokenRequest.ExtraData extraData = new GenerateTokenRequest.ExtraData();
-        extraData.setKey("Type dossier");
-        extraData.setValue("Autorisation mouvement portuaire");
+        extraData.setKey("Invoice");
+        extraData.setValue(orderId);
 
         GenerateTokenRequest request = new GenerateTokenRequest();
         request.setOrderId(orderId);
         request.setOrderDate(orderDate);
-        request.setTotalAmount(signatureUtil.formatAmount(amount));
+        request.setTotalAmount(signatureUtil.formatAmount(totalAmount));
         request.setCurrency(currencyFinal);
         request.setPaymentMode("MULTI_CANAL");
         request.setPaymentType("TOTAL");
         request.setCashierId(props.getCashierId());
-        request.setItems(List.of(item));
+        request.setItems(cmiItems);
         request.setClientInfo(clientInfo);
         request.setCountryCode("MA");
         request.setOrderLinks(orderLinks);
@@ -138,7 +148,7 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
         request.setLanguage("fr");
 
         String sigData = signatureUtil.buildTokenGenSignatureData(
-                signatureUtil.formatAmount(amount),
+                signatureUtil.formatAmount(totalAmount),
                 currencyFinal,
                 props.getMerchantCode(),
                 props.getStore(),
@@ -174,7 +184,7 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
         HttpEntity<GenerateTokenRequest> entity = new HttpEntity<>(request, headers);
 
         try {
-            log.info("[CMI] Generating token for orderId={}, amount={}", orderId, amount);
+            log.info("[CMI] Generating token for orderId={}, totalAmount={}", orderId, totalAmount);
             ResponseEntity<GenerateTokenResponse> response = restTemplate.exchange(
                     URI.create(url), HttpMethod.POST, entity, GenerateTokenResponse.class);
 
@@ -198,7 +208,7 @@ public class CmiFatouratiClientAdapter implements CmiFatouratiClientPort {
             return FatouratiToken.builder()
                     .tokenRef(body.getTokenRef())
                     .orderId(body.getOrderId() != null ? body.getOrderId() : orderId)
-                    .totalAmount(amount)
+                    .totalAmount(totalAmount)
                     .currency(currencyFinal)
                     .qrCode(body.getQrCode())
                     .channels(channels)

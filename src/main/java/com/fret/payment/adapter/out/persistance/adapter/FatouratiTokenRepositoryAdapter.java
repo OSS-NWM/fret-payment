@@ -107,11 +107,30 @@ public class FatouratiTokenRepositoryAdapter implements FatouratiTokenRepository
                 .map(this::toDomain);
     }
 
+    @Override
+    public Optional<FatouratiToken> findActiveByInvoiceId(Long invoiceId) {
+        return jpaRepository.findByInvoiceIdAndStatus(invoiceId, FatouratiTokenStatus.CREATED)
+                .map(this::toDomain);
+    }
+
+    @Override
+    public Optional<FatouratiToken> findByInvoiceIdAndStatus(Long invoiceId, FatouratiTokenStatus status) {
+        return jpaRepository.findByInvoiceIdAndStatus(invoiceId, status)
+                .map(this::toDomain);
+    }
+
+    @Override
+    public Optional<FatouratiToken> findByOrderId(String orderId) {
+        return jpaRepository.findByOrderId(orderId).map(this::toDomain);
+    }
+
     private FatouratiTokenEntity toEntity(FatouratiToken token) {
         return FatouratiTokenEntity.builder()
                 .id(token.getId())
                 .tokenRef(token.getTokenRef())
+                .invoiceId(token.getInvoiceId())
                 .mouvementId(token.getMouvementId())
+                .invoiceLineIds(token.getInvoiceLineIds())
                 .orderId(token.getOrderId())
                 .totalAmount(token.getTotalAmount())
                 .currency(token.getCurrency())
@@ -129,7 +148,9 @@ public class FatouratiTokenRepositoryAdapter implements FatouratiTokenRepository
         return FatouratiToken.builder()
                 .id(entity.getId())
                 .tokenRef(entity.getTokenRef())
+                .invoiceId(entity.getInvoiceId())
                 .mouvementId(entity.getMouvementId())
+                .invoiceLineIds(entity.getInvoiceLineIds())
                 .orderId(entity.getOrderId())
                 .totalAmount(entity.getTotalAmount())
                 .currency(entity.getCurrency())

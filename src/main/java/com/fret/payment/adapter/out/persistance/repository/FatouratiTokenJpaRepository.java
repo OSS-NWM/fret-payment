@@ -15,4 +15,8 @@ public interface FatouratiTokenJpaRepository extends JpaRepository<FatouratiToke
     Optional<FatouratiTokenEntity> findByMouvementId(String mouvementId);
 
     Optional<FatouratiTokenEntity> findByMouvementIdAndStatus(String mouvementId, FatouratiTokenStatus status);
+
+    Optional<FatouratiTokenEntity> findByInvoiceIdAndStatus(Long invoiceId, FatouratiTokenStatus status);
+
+    Optional<FatouratiTokenEntity> findByOrderId(String orderId);
 }

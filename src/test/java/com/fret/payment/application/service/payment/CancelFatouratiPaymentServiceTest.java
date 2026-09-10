@@ -40,7 +40,7 @@ class CancelFatouratiPaymentServiceTest {
 
         service.cancel(mouvementId);
 
-        verify(tokenRepository).updateStatus("TOKEN123", FatouratiTokenStatus.CANCELLED);
+        verify(tokenRepository).recordTransition("TOKEN123", FatouratiTokenStatus.CREATED, FatouratiTokenStatus.CANCELLED, "USER_CANCEL", "CMI_WEBHOOK", null, null);
     }
 
     @Test

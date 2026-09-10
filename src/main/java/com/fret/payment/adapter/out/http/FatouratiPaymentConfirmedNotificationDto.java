@@ -11,9 +11,14 @@ import java.math.BigDecimal;
 @Builder
 public class FatouratiPaymentConfirmedNotificationDto {
     private String tokenRef;
+    private Long invoiceId;
     private String mouvementId;
     private BigDecimal totalAmount;
     private String currency;
     private String transactionNumber;
     private String transactionDate;
+    private String channel;
+    private String operator;
+    private String aggregatorCode;
+    private String paymentSystemTransactionNumber;
 }

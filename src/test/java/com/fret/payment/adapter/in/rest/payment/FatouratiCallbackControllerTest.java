@@ -64,8 +64,7 @@ class FatouratiCallbackControllerTest {
                 {"tokenRef":"TOKEN123","orderId":"MV-123","totalAmount":100.00,"currency":"504","decisionCode":0,"fatouratiTransactionNumber":"TRX789"}
                 """;
 
-        when(confirmService.confirmPayment(any())).thenReturn("0");
-        when(confirmService.generateReceiptNumber()).thenReturn("REC1234567890ABCD");
+        when(confirmService.confirmPayment(any())).thenReturn("REC1234567890ABCD");
 
         mockMvc.perform(post("/api/payment/fatourati/callback")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -118,7 +117,7 @@ class FatouratiCallbackControllerTest {
                         .header("x-signature", "valid_sig")
                         .content(requestBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.receiptNumber").value("ALREADY_PROCESSED"));
+                .andExpect(jsonPath("$.receiptNumber").value("2"));
     }
 
     @Test
@@ -192,12 +191,20 @@ class FatouratiCallbackControllerTest {
                 {"tokenRef":"TOKEN123","orderId":"MV-123","totalAmount":100.00,"currency":"504"}
                 """;
 
+        FatouratiToken token = FatouratiToken.builder()
+                .tokenRef("TOKEN123")
+                .mouvementId("MV-123")
+                .status(FatouratiTokenStatus.CREATED)
+                .build();
+
+        when(tokenRepository.findByOrderId("MV-123")).thenReturn(Optional.of(token));
         when(cmiProperties.getMerchantCode()).thenReturn("100024");
         when(cmiProperties.getStore()).thenReturn("100030");
         when(cmiProperties.getStoreApiKey()).thenReturn("SECRETKEY");
+        when(cmiProperties.getSignatureAlgorithm()).thenReturn("HmacSHA256");
         when(signatureUtil.buildCancelSignatureData(any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn("data");
-        when(signatureUtil.computeSignature("data", "SECRETKEY")).thenReturn("valid_sig");
+        when(signatureUtil.computeSignature(eq("data"), any(), eq("SECRETKEY"))).thenReturn("valid_sig");
         when(signatureUtil.formatAmount(any())).thenReturn("100.00");
         when(signatureUtil.constantTimeEquals("valid_sig", "valid_sig")).thenReturn(true);
 
@@ -256,8 +263,7 @@ class FatouratiCallbackControllerTest {
                 {"tokenRef":"TOKEN123","orderId":"MV-123","totalAmount":100.00,"currency":"504","decisionCode":0,"fatouratiTransactionNumber":"TRX789"}
                 """;
 
-        when(confirmService.confirmPayment(any())).thenReturn("0");
-        when(confirmService.generateReceiptNumber()).thenReturn("REC1234567890ABCD");
+        when(confirmService.confirmPayment(any())).thenReturn("REC1234567890ABCD");
 
         mockMvc.perform(post("/api/payment/fatourati/callback")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -283,13 +289,21 @@ class FatouratiCallbackControllerTest {
                 {"tokenRef":"TOKEN123","orderId":"MV-123","totalAmount":100.00,"currency":"504"}
                 """;
 
+        FatouratiToken token = FatouratiToken.builder()
+                .tokenRef("TOKEN123")
+                .mouvementId("MV-123")
+                .status(FatouratiTokenStatus.CREATED)
+                .build();
+
+        when(tokenRepository.findByOrderId("MV-123")).thenReturn(Optional.of(token));
         when(signatureUtil.formatAmount(any())).thenReturn("100.00");
         when(cmiProperties.getMerchantCode()).thenReturn("100024");
         when(cmiProperties.getStore()).thenReturn("100030");
         when(cmiProperties.getStoreApiKey()).thenReturn("SECRETKEY");
+        when(cmiProperties.getSignatureAlgorithm()).thenReturn("HmacSHA256");
         when(signatureUtil.buildCancelSignatureData(any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn("data");
-        when(signatureUtil.computeSignature("data", "SECRETKEY")).thenReturn("valid_sig");
+        when(signatureUtil.computeSignature(eq("data"), any(), eq("SECRETKEY"))).thenReturn("valid_sig");
         when(signatureUtil.constantTimeEquals("valid_sig", "valid_sig")).thenReturn(true);
 
         mockMvc.perform(post("/api/payment/fatourati/cancel")

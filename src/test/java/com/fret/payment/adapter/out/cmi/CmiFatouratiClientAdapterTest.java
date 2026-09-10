@@ -3,6 +3,7 @@ package com.fret.payment.adapter.out.cmi;
 import com.fret.payment.domain.model.payment.FatouratiToken;
 import com.fret.payment.domain.model.payment.FatouratiTokenStatus;
 import com.fret.payment.domain.model.payment.FatouratiTransactionStatus;
+import com.fret.payment.adapter.out.cmi.InvoiceLinePayload;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -148,8 +149,14 @@ class CmiFatouratiClientAdapterTest {
                         {"tokenRef":"TOKEN-ABC","orderId":"MV-123","amount":"100.00","currency":"504","status":"SUCCESS","expiresAt":"2025-12-31T23:59:00","qrcode":"data:image/png;base64,QRCODE","channels":["MOBILE_MONEY","CARD"]}
                         """, MediaType.APPLICATION_JSON));
 
+        List<InvoiceLinePayload> items = List.of(
+                InvoiceLinePayload.builder().idLine(1L).codeArticle("ART-001").description("Droit de port").amount(new BigDecimal("100.00")).build()
+        );
+
         FatouratiToken token = adapter.generateToken(
+                1L,
                 "MV-123",
+                items,
                 new BigDecimal("100.00"),
                 "504",
                 "http://localhost:8081/callback",
@@ -180,7 +187,10 @@ class CmiFatouratiClientAdapterTest {
                         {"tokenRef":"TOKEN-XYZ","orderId":"MV-123","status":"SUCCESS","expiresAt":"2025-12-31T23:59:00"}
                         """, MediaType.APPLICATION_JSON));
 
-        adapter.generateToken("MV-123", new BigDecimal("100.00"), "504",
+        List<InvoiceLinePayload> items = List.of(
+                InvoiceLinePayload.builder().idLine(1L).codeArticle("ART-001").description("Test").amount(new BigDecimal("100.00")).build()
+        );
+        adapter.generateToken(1L, "MV-123", items, new BigDecimal("100.00"), "504",
                 "http://localhost:8081/callback",
                 "http://localhost:8081/cancel",
                 "http://localhost:8081/check-status");
@@ -203,7 +213,10 @@ class CmiFatouratiClientAdapterTest {
                         {"tokenRef":"TOKEN-DUAL","orderId":"MV-123","amount":"80.00","currency":"504","status":"SUCCESS","expiresAt":"2025-12-31T23:59:00","qrcode":"QR","channels":["CARD"]}
                         """, MediaType.APPLICATION_JSON));
 
-        FatouratiToken token = adapter.generateToken("MV-123", new BigDecimal("80.00"), "504",
+        List<InvoiceLinePayload> items = List.of(
+                InvoiceLinePayload.builder().idLine(1L).codeArticle("ART-001").description("Test").amount(new BigDecimal("80.00")).build()
+        );
+        FatouratiToken token = adapter.generateToken(1L, "MV-123", items, new BigDecimal("80.00"), "504",
                 "http://localhost:8081/callback",
                 "http://localhost:8081/cancel",
                 "http://localhost:8081/check-status");
@@ -225,7 +238,10 @@ class CmiFatouratiClientAdapterTest {
         mockServer.expect(requestTo("https://agg-merchant-qa.cmi.co.ma/api/v1/merchants/100024/stores/100030/tokens/TOKEN-404"))
                 .andRespond(withBadRequest());
 
-        FatouratiToken token = adapter.generateToken("MV-123", new BigDecimal("100.00"), "504",
+        List<InvoiceLinePayload> items = List.of(
+                InvoiceLinePayload.builder().idLine(1L).codeArticle("ART-001").description("Test").amount(new BigDecimal("100.00")).build()
+        );
+        FatouratiToken token = adapter.generateToken(1L, "MV-123", items, new BigDecimal("100.00"), "504",
                 "http://localhost:8081/callback",
                 "http://localhost:8081/cancel",
                 "http://localhost:8081/check-status");
@@ -391,7 +407,7 @@ class CmiFatouratiClientAdapterTest {
                 .andExpect(jsonPath("$.clientInfo.email").value("contact@nadorwestmed.ma"))
                 .andExpect(jsonPath("$.clientInfo.phoneNumber").value("+212600000000"))
                 .andExpect(jsonPath("$.clientInfo.infoToShow[0].key").value("Facture"))
-                .andExpect(jsonPath("$.items[0].id").value("MV-123"))
+                .andExpect(jsonPath("$.items[0].id").value("line-1"))
                 .andExpect(jsonPath("$.items[0].amount").value(100.00))
                 .andExpect(jsonPath("$.items[0].due").value(true))
                 .andExpect(jsonPath("$.items[0].selected").value(true))
@@ -400,8 +416,14 @@ class CmiFatouratiClientAdapterTest {
                         {"status":"CREATED","orderId":"MV-123","tokenRef":"TOKEN-SPEC"}
                         """, MediaType.APPLICATION_JSON));
 
+        List<InvoiceLinePayload> items = List.of(
+                InvoiceLinePayload.builder().idLine(1L).codeArticle("ART-001").description("Droit de port").amount(new BigDecimal("100.00")).build()
+        );
+
         FatouratiToken token = adapter.generateToken(
+                1L,
                 "MV-123",
+                items,
                 new BigDecimal("100.00"),
                 "504",
                 "http://localhost:8081/callback",
@@ -425,7 +447,7 @@ class CmiFatouratiClientAdapterTest {
                           "orderId":"MV-456",
                           "tokenRef":"TOKEN-QR-POST",
                           "qrCode":"%s",
-                          "extraData":[{"key":"Type dossier","value":"Autorisation mouvement portuaire"}],
+                          "extraData":[{"key":"Invoice","value":"MV-456"}],
                           "refPaymentSystems":[
                             {"description":"OrangeMoney.t","urlSite":null,"urlLogo":"https://x/o.png"},
                             {"description":"CASHPLUSMobile.t","urlSite":null,"urlLogo":"https://x/c.png"}
@@ -433,8 +455,14 @@ class CmiFatouratiClientAdapterTest {
                         }
                         """, qrDataUri), MediaType.APPLICATION_JSON));
 
+        List<InvoiceLinePayload> items = List.of(
+                InvoiceLinePayload.builder().idLine(1L).codeArticle("ART-QR").description("Article QR").amount(new BigDecimal("250.00")).build()
+        );
+
         FatouratiToken token = adapter.generateToken(
+                1L,
                 "MV-456",
+                items,
                 new BigDecimal("250.00"),
                 "504",
                 "http://localhost:8081/callback",

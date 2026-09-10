@@ -12,8 +12,12 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Schema(description = "Payment status response for a mouvement")
+@Schema(description = "Payment status response for an invoice or mouvement")
 public class FatouratiStatusResponseDto {
+
+    @Schema(description = "Invoice ID", example = "1001")
+    @JsonProperty("invoiceId")
+    private Long invoiceId;
 
     @Schema(description = "Mouvement ID", example = "AMI-202607000001")
     @JsonProperty("mouvementId") private String mouvementId;

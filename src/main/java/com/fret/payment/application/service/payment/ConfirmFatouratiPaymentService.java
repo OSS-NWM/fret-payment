@@ -92,13 +92,28 @@ public class ConfirmFatouratiPaymentService implements ConfirmFatouratiPaymentUs
             log.info("[FATOURATI_CONFIRM] Payment approved: tokenRef={}, channel={}, operator={}, receipt={}",
                     callback.getTokenRef(), callback.getChannel(), callback.getOperator(), receiptNumber);
 
-            fretManagementNotifier.notifyPaymentConfirmed(
-                    callback.getTokenRef(),
-                    token.getMouvementId(),
-                    callback.getTotalAmount(),
-                    callback.getCurrency(),
-                    callback.getFatouratiTransactionNumber()
-            );
+            if (token.getInvoiceId() != null) {
+                fretManagementNotifier.notifyPaymentConfirmedByInvoiceId(
+                        callback.getTokenRef(),
+                        token.getInvoiceId(),
+                        token.getMouvementId(),
+                        callback.getTotalAmount(),
+                        callback.getCurrency(),
+                        callback.getFatouratiTransactionNumber(),
+                        callback.getChannel(),
+                        callback.getOperator(),
+                        callback.getAggregatorCode(),
+                        callback.getPaymentSystemTransactionNumber()
+                );
+            } else {
+                fretManagementNotifier.notifyPaymentConfirmed(
+                        callback.getTokenRef(),
+                        token.getMouvementId(),
+                        callback.getTotalAmount(),
+                        callback.getCurrency(),
+                        callback.getFatouratiTransactionNumber()
+                );
+            }
         } else if (callback.getDecisionCode() == 1) {
             tokenRepository.recordTransition(
                     callback.getTokenRef(),

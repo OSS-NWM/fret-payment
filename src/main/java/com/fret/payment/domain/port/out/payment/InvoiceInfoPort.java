@@ -5,6 +5,7 @@ import com.fret.payment.domain.model.payment.InvoiceInfo;
 import java.util.List;
 
 public interface InvoiceInfoPort {
-
+    InvoiceInfo findById(Long invoiceId);
+    List<InvoiceInfo> findByIds(List<Long> invoiceIds);
     List<InvoiceInfo> findByMouvementId(String mouvementId);
 }

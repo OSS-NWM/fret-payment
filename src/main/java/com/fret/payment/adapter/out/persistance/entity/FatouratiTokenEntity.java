@@ -26,8 +26,15 @@ public class FatouratiTokenEntity {
     @Column(name = "token_ref", nullable = false, unique = true, length = 64)
     private String tokenRef;
 
-    @Column(name = "mouvement_id", nullable = false, length = 100)
+    @Column(name = "invoice_id")
+    private Long invoiceId;
+
+    @Column(name = "mouvement_id", length = 100)
     private String mouvementId;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "invoice_line_ids", columnDefinition = "jsonb")
+    private List<Long> invoiceLineIds;
 
     @Column(name = "order_id", length = 64)
     private String orderId;

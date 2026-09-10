@@ -18,6 +18,10 @@ rem ─── Keycloak ───
 set KEYCLOAK_ISSUER=http://84.8.223.202:8080/realms/Fret-Management
 set KEYCLOAK_JWKS=http://84.8.223.202:8080/realms/Fret-Management/protocol/openid-connect/certs
 
+rem ─── Cross-service URLs ───
+rem Fret-management base URL (used by InvoiceInfoHttpAdapter + FretManagementNotifierAdapter)
+set FRET_MANAGEMENT_URL=http://51.170.138.175:8081
+
 rem ─── Server ───
 set SERVER_PORT=8000
 
@@ -35,10 +39,10 @@ set FATOURATI_SIGNATURE_ALGORITHM=HMAC-SHA256
 set FATOURATI_CASHIER_ID=1
 rem ─── CMI Webhook Callback URLs (must be publicly accessible from CMI) ───
 rem These URLs are sent to CMI in the token request. CMI calls them on payment events.
-rem Point to THIS machine's fret-payment backend (port 8000), not the proxy.
-set FATOURATI_CALLBACK_URL=http://51.170.134.229:8000/api/payment/fatourati/callback
-set FATOURATI_CANCEL_URL=http://51.170.134.229:8000/api/payment/fatourati/cancel
-set FATOURATI_CHECK_STATUS_URL=http://51.170.134.229:8000/api/payment/fatourati/check-status
+rem Point to THIS machine's fret-payment backend, accessible publicly.
+set FATOURATI_CALLBACK_URL=https://payment.test.ossnwm.com/api/payment/fatourati/callback
+set FATOURATI_CANCEL_URL=https://payment.test.ossnwm.com/api/payment/fatourati/cancel
+set FATOURATI_CHECK_STATUS_URL=https://payment.test.ossnwm.com/api/payment/fatourati/check-status
 set FATOURATI_CALLBACK_SECRET=w23M2dC0VFRYughLe8z9TCEbIdFNhKCKDLW
 set FATOURATI_CLIENT_NAME=Client Nador West Med
 set FATOURATI_CLIENT_EMAIL=contact@nadorwestmed.ma

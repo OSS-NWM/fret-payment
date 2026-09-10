@@ -50,4 +50,31 @@ public class QueryFatouratiStatusService implements GetFatouratiTransactionStatu
     public FatouratiToken getToken(String mouvementId) {
         return tokenRepository.findActiveByMouvementId(mouvementId).orElse(null);
     }
+
+    public FatouratiTransactionStatus getStatusByInvoiceId(Long invoiceId) {
+        log.debug("[FATOURATI_STATUS] Querying status for invoiceId={}", invoiceId);
+
+        Optional<FatouratiToken> tokenOpt = tokenRepository.findActiveByInvoiceId(invoiceId);
+        if (tokenOpt.isEmpty()) {
+            return FatouratiTransactionStatus.NOT_FOUND;
+        }
+
+        var token = tokenOpt.get();
+        if (token.getStatus() == FatouratiTokenStatus.CANCELLED) {
+            return FatouratiTransactionStatus.CANCELLED;
+        }
+        if (token.getStatus() == FatouratiTokenStatus.CONSUMED) {
+            return FatouratiTransactionStatus.PAID;
+        }
+
+        if (token.getExpiresAt() != null && LocalDateTime.now().isAfter(token.getExpiresAt())) {
+            return FatouratiTransactionStatus.NOT_FOUND;
+        }
+
+        return FatouratiTransactionStatus.PENDING;
+    }
+
+    public FatouratiToken getTokenByInvoiceId(Long invoiceId) {
+        return tokenRepository.findActiveByInvoiceId(invoiceId).orElse(null);
+    }
 }

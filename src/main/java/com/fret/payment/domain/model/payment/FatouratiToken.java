@@ -15,7 +15,9 @@ public class FatouratiToken {
 
     private Long id;
     private String tokenRef;
+    private Long invoiceId;
     private String mouvementId;
+    private List<Long> invoiceLineIds;
     private String orderId;
     private BigDecimal totalAmount;
     private String currency;

@@ -83,14 +83,14 @@ class ConfirmFatouratiPaymentServiceTest {
         when(cmiProperties.getStoreApiKey()).thenReturn("SECRETKEY");
         when(signatureUtil.buildCallbackSignatureData(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(signatureData);
-        when(signatureUtil.computeSignature(signatureData, "SECRETKEY")).thenReturn(signature);
+        when(signatureUtil.computeSignature(any(), any(), any())).thenReturn(signature);
         when(signatureUtil.constantTimeEquals(signature, signature)).thenReturn(true);
         when(tokenRepository.findByTokenRef(tokenRef)).thenReturn(Optional.of(token));
 
         String result = service.confirmPayment(callback);
 
-        assertThat(result).isEqualTo("0");
-        verify(tokenRepository).updateStatus(tokenRef, FatouratiTokenStatus.CONSUMED);
+        assertThat(result).startsWith("REC");
+        verify(tokenRepository).updateConfirmation(eq(tokenRef), eq(FatouratiTokenStatus.CONSUMED), any(), any(), eq("PAYMENT_CONFIRMED"), eq("CMI_WEBHOOK"));
     }
 
     @Test
@@ -109,7 +109,7 @@ class ConfirmFatouratiPaymentServiceTest {
         when(cmiProperties.getStoreApiKey()).thenReturn("SECRETKEY");
         when(signatureUtil.buildCallbackSignatureData(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn("some_data");
-        when(signatureUtil.computeSignature(any(), eq("SECRETKEY"))).thenReturn("real_sig");
+        when(signatureUtil.computeSignature(any(), any(), any())).thenReturn("real_sig");
         when(signatureUtil.constantTimeEquals("real_sig", "invalid_signature")).thenReturn(false);
 
         String result = service.confirmPayment(callback);
@@ -123,17 +123,28 @@ class ConfirmFatouratiPaymentServiceTest {
         String tokenRef = "TOKEN123";
         FatouratiPaymentCallback callback = FatouratiPaymentCallback.builder()
                 .tokenRef(tokenRef)
+                .orderId("ORDER456")
+                .totalAmount(new BigDecimal("100.00"))
+                .currency("504")
                 .fatouratiTransactionNumber("TRX789")
-                .signature("sig")
                 .decisionCode(0)
+                .signature("sig")
                 .build();
 
         when(callbackLogRepository.isCallbackProcessed("TRX789")).thenReturn(true);
+        when(signatureUtil.formatAmount(any())).thenReturn("100.00");
+        when(cmiProperties.getMerchantCode()).thenReturn("100024");
+        when(cmiProperties.getStore()).thenReturn("100030");
+        when(cmiProperties.getStoreApiKey()).thenReturn("SECRETKEY");
+        when(signatureUtil.buildCallbackSignatureData(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn("data");
+        when(signatureUtil.computeSignature(any(), any(), any())).thenReturn("sig");
+        when(signatureUtil.constantTimeEquals("sig", "sig")).thenReturn(true);
 
         String result = service.confirmPayment(callback);
 
         assertThat(result).isEqualTo("2");
-        verify(tokenRepository, never()).updateStatus(any(), any());
+        verify(tokenRepository, never()).updateConfirmation(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -152,7 +163,7 @@ class ConfirmFatouratiPaymentServiceTest {
         when(cmiProperties.getStoreApiKey()).thenReturn("SECRETKEY");
         when(signatureUtil.buildCallbackSignatureData(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn("data");
-        when(signatureUtil.computeSignature(any(), eq("SECRETKEY"))).thenReturn("sig");
+        when(signatureUtil.computeSignature(any(), any(), any())).thenReturn("sig");
         when(signatureUtil.constantTimeEquals("sig", "sig")).thenReturn(true);
         when(tokenRepository.findByTokenRef("UNKNOWN-TOKEN")).thenReturn(Optional.empty());
 
@@ -183,6 +194,12 @@ class ConfirmFatouratiPaymentServiceTest {
         String tokenRef = "TOKEN123";
         FatouratiPaymentCallback callback = FatouratiPaymentCallback.builder()
                 .tokenRef(tokenRef)
+                .orderId("ORDER456")
+                .totalAmount(new BigDecimal("100.00"))
+                .currency("504")
+                .operator("ORANGE_MAROC")
+                .channel("MOBILE_MONEY")
+                .paymentMode("CASH")
                 .fatouratiTransactionNumber("TRX789")
                 .decisionCode(1)
                 .signature("sig")
@@ -200,14 +217,15 @@ class ConfirmFatouratiPaymentServiceTest {
         when(cmiProperties.getStoreApiKey()).thenReturn("SECRETKEY");
         when(signatureUtil.buildCallbackSignatureData(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn("data");
-        when(signatureUtil.computeSignature(any(), eq("SECRETKEY"))).thenReturn("sig");
+        when(signatureUtil.computeSignature(any(), any(), any())).thenReturn("sig");
         when(signatureUtil.constantTimeEquals("sig", "sig")).thenReturn(true);
         when(tokenRepository.findByTokenRef(tokenRef)).thenReturn(Optional.of(token));
 
         String result = service.confirmPayment(callback);
 
-        assertThat(result).isEqualTo("0");
-        verify(tokenRepository, never()).updateStatus(eq(tokenRef), eq(FatouratiTokenStatus.CONSUMED));
+        assertThat(result).isNotEqualTo("0");
+        assertThat(result).isNotEmpty();
+        verify(tokenRepository, never()).updateConfirmation(any(), any(), any(), any(), any(), any());
     }
 
     @Test

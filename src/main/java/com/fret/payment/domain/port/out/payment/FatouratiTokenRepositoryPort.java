@@ -23,4 +23,7 @@ public interface FatouratiTokenRepositoryPort {
                              String channel, String operator, String reason, String actor);
 
     Optional<FatouratiToken> findActiveByMouvementId(String mouvementId);
+    Optional<FatouratiToken> findActiveByInvoiceId(Long invoiceId);
+    Optional<FatouratiToken> findByInvoiceIdAndStatus(Long invoiceId, FatouratiTokenStatus status);
+    Optional<FatouratiToken> findByOrderId(String orderId);
 }

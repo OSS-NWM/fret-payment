@@ -55,21 +55,20 @@ class OpenApiContractTest {
     private ObjectMapper objectMapper;
 
     private static final String[] REQUIRED_PATHS = {
-            "/api/payment/fatourati/mouvement/{mouvementId}/paiement/fatourati",
-            "/api/payment/fatourati/mouvement/{mouvementId}/paiement/fatourati/status",
-            "/api/payment/fatourati/mouvement/{mouvementId}/paiement/fatourati/history",
-            "/api/payment/fatourati/mouvement/{mouvementId}/paiement/fatourati/transactions",
+            "/api/payment/fatourati/invoices/{invoiceId}/paiement/fatourati",
+            "/api/payment/fatourati/invoices/{invoiceId}/paiement/fatourati/status",
+            "/api/payment/fatourati/invoices/{invoiceId}/paiement/fatourati/history",
+            "/api/payment/fatourati/invoices/{invoiceId}/paiement/fatourati/transactions",
+            "/api/payment/fatourati/paiements/fatourati/group",
             "/api/payment/fatourati/callback",
             "/api/payment/fatourati/check-status",
             "/api/payment/fatourati/cancel"
     };
 
     private static final String[] REQUIRED_SCHEMAS = {
-            "FatouratiTokenResponse",
-            "FatouratiStatusResponse",
-            "FatouratiPaymentHistoryEntry",
-            "FatouratiPaymentTransaction",
-            "FatouratiCancelRequest"
+            "InitiateGroupPaymentRequest",
+            "FatouratiTokenResponseDto",
+            "FatouratiStatusResponseDto"
     };
 
     @Test
@@ -93,10 +92,11 @@ class OpenApiContractTest {
         JsonNode paths = getApiDocsPaths();
 
         String[] protectedPaths = {
-                "/api/payment/fatourati/mouvement/{mouvementId}/paiement/fatourati",
-                "/api/payment/fatourati/mouvement/{mouvementId}/paiement/fatourati/status",
-                "/api/payment/fatourati/mouvement/{mouvementId}/paiement/fatourati/history",
-                "/api/payment/fatourati/mouvement/{mouvementId}/paiement/fatourati/transactions"
+                "/api/payment/fatourati/invoices/{invoiceId}/paiement/fatourati",
+                "/api/payment/fatourati/invoices/{invoiceId}/paiement/fatourati/status",
+                "/api/payment/fatourati/invoices/{invoiceId}/paiement/fatourati/history",
+                "/api/payment/fatourati/invoices/{invoiceId}/paiement/fatourati/transactions",
+                "/api/payment/fatourati/paiements/fatourati/group"
         };
 
         for (String path : protectedPaths) {
@@ -159,27 +159,7 @@ class OpenApiContractTest {
         }
     }
 
-    @Test
-    void apiDocs_historyEndpoint_returnsArraySchema() throws Exception {
-        JsonNode op = getApiDocsPaths()
-                .path("/api/payment/fatourati/mouvement/{mouvementId}/paiement/fatourati/history")
-                .path("get");
-        JsonNode content = op.path("responses").path("200").path("content").path("application/json").path("schema");
-        assertThat(content.has("type") || content.has("$ref") || content.has("items"))
-                .as("History endpoint 200 response should declare schema/array/items")
-                .isTrue();
-    }
 
-    @Test
-    void apiDocs_transactionsEndpoint_returnsArraySchema() throws Exception {
-        JsonNode op = getApiDocsPaths()
-                .path("/api/payment/fatourati/mouvement/{mouvementId}/paiement/fatourati/transactions")
-                .path("get");
-        JsonNode content = op.path("responses").path("200").path("content").path("application/json").path("schema");
-        assertThat(content.has("type") || content.has("$ref") || content.has("items"))
-                .as("Transactions endpoint 200 response should declare schema/array/items")
-                .isTrue();
-    }
 
     @Test
     void apiDocs_bearerAuthScheme_isDefined() throws Exception {

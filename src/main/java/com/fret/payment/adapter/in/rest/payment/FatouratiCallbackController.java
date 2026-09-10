@@ -230,7 +230,7 @@ public class FatouratiCallbackController {
         }
 
         if (dto.getOrderId() != null && !dto.getOrderId().isBlank()) {
-            var tokenOpt = tokenRepository.findByMouvementId(dto.getOrderId());
+            var tokenOpt = tokenRepository.findByOrderId(dto.getOrderId());
             tokenOpt.ifPresent(token -> historyRepository.save(
                     com.fret.payment.domain.model.payment.FatouratiTokenStatusHistory.builder()
                             .tokenRef(token.getTokenRef())
@@ -240,7 +240,11 @@ public class FatouratiCallbackController {
                             .actor("CMI_WEBHOOK")
                             .build()
             ));
-            cancelService.cancel(dto.getOrderId());
+            if (tokenOpt.get().getInvoiceId() != null) {
+                cancelService.cancelByInvoiceId(tokenOpt.get().getInvoiceId(), "CMI_WEBHOOK");
+            } else {
+                cancelService.cancel(dto.getOrderId());
+            }
         }
 
         return ResponseEntity.ok(Map.of());

@@ -48,4 +48,31 @@ public class CancelFatouratiPaymentService implements CancelFatouratiPaymentUseC
     public Optional<FatouratiToken> getTokenForStatus(String tokenRef) {
         return tokenRepository.findByTokenRef(tokenRef);
     }
+
+    public void cancelByInvoiceId(Long invoiceId) {
+        cancelByInvoiceId(invoiceId, "CMI_WEBHOOK");
+    }
+
+    public void cancelByInvoiceId(Long invoiceId, String actor) {
+        log.info("[FATOURATI_CANCEL] Cancelling payment for invoiceId={}, actor={}", invoiceId, actor);
+
+        Optional<FatouratiToken> tokenOpt = tokenRepository.findActiveByInvoiceId(invoiceId);
+        if (tokenOpt.isEmpty()) {
+            log.warn("[FATOURATI_CANCEL] No active token found for invoiceId={}", invoiceId);
+            return;
+        }
+
+        var token = tokenOpt.get();
+        tokenRepository.recordTransition(
+                token.getTokenRef(),
+                token.getStatus(),
+                FatouratiTokenStatus.CANCELLED,
+                "USER_CANCEL",
+                actor,
+                null,
+                null
+        );
+        log.info("[FATOURATI_CANCEL] Token cancelled: tokenRef={}, invoiceId={}, actor={}",
+                token.getTokenRef(), invoiceId, actor);
+    }
 }

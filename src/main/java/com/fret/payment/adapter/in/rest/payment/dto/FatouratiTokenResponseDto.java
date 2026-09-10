@@ -19,6 +19,10 @@ public class FatouratiTokenResponseDto {
     @Schema(description = "CMI token reference (e.g. 1000300000071)", example = "1000300000071")
     @JsonProperty("tokenRef") private String tokenRef;
 
+    @Schema(description = "Invoice ID this payment is for", example = "1001")
+    @JsonProperty("invoiceId")
+    private Long invoiceId;
+
     @Schema(description = "Mouvement ID this payment is for", example = "AMI-202607000001")
     @JsonProperty("mouvementId") private String mouvementId;
 

@@ -45,4 +45,35 @@ public class FretManagementNotifierAdapter implements FretManagementNotifierPort
                     tokenRef, e.getMessage());
         }
     }
+
+    @Override
+    public void notifyPaymentConfirmedByInvoiceId(String tokenRef, Long invoiceId, String mouvementId,
+                                                  BigDecimal amount, String currency, String transactionNumber,
+                                                  String channel, String operator, String aggregatorCode,
+                                                  String paymentSystemTransactionNumber) {
+        String url = fretManagementBaseUrl + "/api/internal/fatourati/payment-confirmed";
+
+        FatouratiPaymentConfirmedNotificationDto payload = FatouratiPaymentConfirmedNotificationDto.builder()
+                .tokenRef(tokenRef)
+                .invoiceId(invoiceId)
+                .mouvementId(mouvementId)
+                .totalAmount(amount)
+                .currency(currency)
+                .transactionNumber(transactionNumber)
+                .transactionDate(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                .channel(channel)
+                .operator(operator)
+                .aggregatorCode(aggregatorCode)
+                .paymentSystemTransactionNumber(paymentSystemTransactionNumber)
+                .build();
+
+        try {
+            restTemplate.postForEntity(url, payload, Void.class);
+            log.info("[NOTIFIER] Payment confirmed (by invoiceId) notification sent: tokenRef={}, invoiceId={}",
+                    tokenRef, invoiceId);
+        } catch (Exception e) {
+            log.warn("[NOTIFIER] Failed to notify fret-management of payment confirmation by invoiceId: tokenRef={}, erreur={}",
+                    tokenRef, e.getMessage());
+        }
+    }
 }

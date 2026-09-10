@@ -21,6 +21,7 @@ public class FretManagementNotifierAdapter implements FretManagementNotifierPort
                                          @Value("${app.fret-management.base-url:http://localhost:8081}") String fretManagementBaseUrl) {
         this.restTemplate = restTemplate;
         this.fretManagementBaseUrl = fretManagementBaseUrl;
+        log.info("[NOTIFIER] Initialized with fretManagementBaseUrl={}", fretManagementBaseUrl);
     }
 
     @Override

@@ -24,6 +24,7 @@ public class InvoiceInfoHttpAdapter implements InvoiceInfoPort {
                                   @Value("${app.fret-management.base-url:http://localhost:8081}") String fretManagementBaseUrl) {
         this.restTemplate = restTemplate;
         this.fretManagementBaseUrl = fretManagementBaseUrl;
+        log.info("[INVOICE_CLIENT] Initialized with fretManagementBaseUrl={}", fretManagementBaseUrl);
     }
 
     @Override

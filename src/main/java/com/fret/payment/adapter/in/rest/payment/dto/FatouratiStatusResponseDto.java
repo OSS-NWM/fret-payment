@@ -37,4 +37,8 @@ public class FatouratiStatusResponseDto {
 
     @Schema(description = "Token expiry datetime", example = "2026-09-07T17:25:55")
     @JsonProperty("expiresAt") private String expiresAt;
+
+    @Schema(description = "Base64 QR code PNG for mobile payment (null if token expired or paid)",
+            example = "data:image/png;base64,...")
+    @JsonProperty("qrCode") private String qrCode;
 }

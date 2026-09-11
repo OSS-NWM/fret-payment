@@ -125,6 +125,7 @@ public class FatouratiPaymentController {
                 .channels(token != null ? token.getChannels() : null)
                 .expiresAt(token != null && token.getExpiresAt() != null
                         ? token.getExpiresAt().toString() : null)
+                .qrCode(token != null ? token.getQrCode() : null)
                 .build();
 
         return ResponseEntity.ok(dto);
